@@ -603,7 +603,7 @@ wakeup_less (const struct list_elem *a, const struct list_elem *b, void* aux UNU
 
 void
 thread_sleep (int64_t ticks) {
-	struct thread * cur = current_thread();
+	struct thread * cur = thread_current();
 	enum intr_level old_level = intr_disable ();	/* interrupt 방해금지모드 설정 */
 	int64_t start = timer_ticks ();
 	cur->wakeup_tick = start + ticks;
