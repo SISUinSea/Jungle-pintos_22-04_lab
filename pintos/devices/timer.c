@@ -93,7 +93,7 @@ timer_sleep (int64_t ticks) {
 	int64_t start = timer_ticks ();
 
 	ASSERT (intr_get_level () == INTR_ON);
-	
+	if (ticks <= 0) return;
 	thread_sleep (ticks);
 }
 
