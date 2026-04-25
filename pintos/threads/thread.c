@@ -32,8 +32,11 @@ static bool priority_isless(const struct list_elem* a ,const struct list_elem* b
 	struct thread* thread_a = list_entry(a,struct thread,elem);
 	struct thread* thread_b = list_entry(b,struct thread,elem);
 
+
 	return thread_a->priority>thread_b->priority;
 }
+static struct list sleep_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -68,6 +71,8 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+void thread_sleep (int64_t ticks);
+void thread_wakeup (void);
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -114,6 +119,7 @@ thread_init (void) {
 	/* Init the globla thread context */
 	lock_init (&tid_lock);
 	list_init (&ready_list);
+	list_init (&sleep_list);
 	list_init (&destruction_req);
 
 	/* Set up a thread structure for the running thread. */
@@ -606,4 +612,43 @@ allocate_tid (void) {
 	lock_release (&tid_lock);
 
 	return tid;
+}
+
+static bool 
+wakeup_less (const struct list_elem *a, const struct list_elem *b, void* aux UNUSED) {
+	struct thread * ta = list_entry (a, struct thread, sleep_elem);
+	struct thread * tb = list_entry (b, struct thread, sleep_elem);
+
+	return ta->wakeup_tick < tb->wakeup_tick;
+}
+
+void
+thread_sleep (int64_t ticks) {
+	enum intr_level old_level = intr_disable ();	/* interrupt 방해금지모드 설정 */
+
+	struct thread * cur = thread_current();
+	int64_t start = timer_ticks ();
+	cur->wakeup_tick = start + ticks;
+	list_insert_ordered(&sleep_list, &(cur->sleep_elem), wakeup_less, NULL);
+	thread_block ();
+
+	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
+}
+
+void 
+thread_wakeup () {
+	enum intr_level old_level = intr_disable ();	/* interrupt 방해금지모드 설정 */
+
+	int64_t cur_ticks = timer_ticks ();
+	struct thread* t;
+
+	while (!list_empty (&sleep_list)) { //큐의 앞에 있는 스레드가 나와야한다면	
+		struct list_elem *e = list_front (&sleep_list);
+		t = list_entry (e, struct thread, sleep_elem);
+		if (t->wakeup_tick > cur_ticks) break;
+		list_pop_front (&sleep_list);
+
+		thread_unblock (t);
+	}	
+	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
 }
