@@ -71,29 +71,67 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED) { //
 	ticks++;
 	thread_tick ();
+
+	thread_wakeup ();  // 이 줄 추가하기
 }
 
 ```
-여기서 해야 하는거
-1. sleep list + global tick 확인
-2. 깨울 thread들 찾기
-3. 걔네들을 ready queue에 넣기
-4. global tick을 업데이트하기
+여기서 해야 하는거 -> thread_wakeup () 추가하기.
 
 # thread_sleep
 ``` C
 /* Suspends execution for approximately TICKS timer ticks. */
 void
 thread_sleep (int64_t ticks) {
-	int64_t start = timer_ticks ();
 
 	1. 현재 스레드를 블럭한다.
-	2. 일어날 로컬 틱을 설정한다. 글로벌 틱 + ticks
+	2. 일어날 로컬 틱(wakeup_tick)을 설정한다. <- (timer_ticks () + ticks)
 	3. sleep 큐에 넣는다.
 	4. 아 맞다 앞 뒤로 인터럽트 방금모 껐다 켜기
-
-
+	5. 필요한 경우 next_wakeup_tick 업데이트
 
 }
 ```
-todo: global next_wakeup_tic 어디에 만들어야 할까? timer.c인가?
+todo: global next_wakeup_tick 어디에 만들어야 할까? timer.c인가?
+	> 
+
+
+
+# thread_wakeup
+
+thread_wakeup () 는 만들 필요 없음. 대신 timer_interrupt에 구현해야 함. 아니면 함수로 따로 구현해서 거기에 그대로 넣는 것도 좋은데??
+> 그럼 timer_interrupt에 thread_wakeup을 호출하도록 설계.
+
+``` C
+/* Suspends execution for approximately TICKS timer ticks. */
+void
+thread_wakeup () {
+
+	1. next_wakeup_tick이 timer_ticks와 같다면(알람 울릴 시간)
+	2. sleep_list에서 next_wakeup_tick와 기상 시각이 같은 thread들에게 깨우는 작업을 수행
+	3. 깨우는 작업이란, 다음을 의미함.
+		3.1. 쓰레드의 상태를 BLOCKED-> READY로 변경
+		3.2. ready list에 추가
+	4. next_wakeup_tick을 sleep list에서 가장 빠른 시각으로 변경
+	5. 이 작업을 하는 동안, list를 만지는 동안에 interrupt는 무시한다.
+
+}
+```
+
+wakeup_tick = find_min_tic();
+# set_wakeup_tick
+``` C
+set_next_wakeup_tick () {
+	1. 기존의 next_wakeup_tick 과 sleep_list[0]->wakeup_tick 비교한다.
+	2. new_wakeup_tick가 더 작다면, next_wakeup_tick를 업데이트한다.
+	3. 아님 말고
+}
+```
+
+# get_wakeup_tick
+필요 할지는 의문이다.
+``` C
+get_wakeup_tick (int new_wakeup_tick) {
+	return next_wakeup_tick;
+}
+```
