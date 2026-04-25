@@ -417,7 +417,7 @@ list_sort (struct list *list, list_less_func *less, void *aux) {
    Runs in O(n) average case in the number of elements in LIST. */
 void
 list_insert_ordered (struct list *list, struct list_elem *elem,
-		list_less_func *less, void *aux) {
+		list_less_func *less, void *aux UNUSED) {
 	struct list_elem *e;
 
 	ASSERT (list != NULL);
