@@ -63,6 +63,7 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+void thread_sleep (int64_t ticks);
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -590,3 +591,22 @@ allocate_tid (void) {
 
 	return tid;
 }
+
+static bool 
+wakeup_less (const struct list_elem *a, const struct list_elem *b, void* aux UNUSED) {
+	struct thread * ta = list_entry (a, struct thread, elem);
+	struct thread * tb = list_entry (b, struct thread, elem);
+
+	return ta->wakeup_tick < tb->wakeup_tick;
+}
+
+void
+thread_sleep (int64_t ticks) {
+	struct thread * cur = current_thread();
+	enum intr_level old_level = intr_disable ();	/* interrupt 방해금지모드 설정 */
+	int64_t start = timer_ticks ();
+	cur->wakeup_tick = start + ticks;
+	list_insert_ordered(&sleep_list, cur->sleep_elem, wakeup_less, NULL);
+	intr_set_level (old_level);						/* interrupt 방해금지모드 해제*/
+}
+
