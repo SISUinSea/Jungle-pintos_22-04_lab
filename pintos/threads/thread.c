@@ -27,7 +27,13 @@
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
+static bool priority_isless(const struct list_elem* a ,const struct list_elem* b,void* aux)
+{
+	struct thread* thread_a = list_entry(a,struct thread,elem);
+	struct thread* thread_b = list_entry(b,struct thread,elem);
 
+	return thread_a->priority>thread_b->priority;
+}
 /* Idle thread. */
 static struct thread *idle_thread;
 
