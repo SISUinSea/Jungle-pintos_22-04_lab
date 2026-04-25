@@ -27,6 +27,14 @@
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
+static bool priority_isless(const struct list_elem* a ,const struct list_elem* b,void* aux)
+{
+	struct thread* thread_a = list_entry(a,struct thread,elem);
+	struct thread* thread_b = list_entry(b,struct thread,elem);
+
+
+	return thread_a->priority>thread_b->priority;
+}
 static struct list sleep_list;
 
 /* Idle thread. */
@@ -210,7 +218,10 @@ thread_create (const char *name, int priority,
 
 	/* Add to run queue. */
 	thread_unblock (t);
-
+	if(priority > thread_current()->priority)
+	{
+		thread_yield();
+	}
 	return tid;
 }
 
@@ -244,7 +255,9 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	//list_push_back (&ready_list, &t->elem);
+	void *aux=NULL;
+	list_insert_ordered(&ready_list, &t->elem,priority_isless,aux);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -306,8 +319,11 @@ thread_yield (void) {
 	ASSERT (!intr_context ());
 
 	old_level = intr_disable ();
-	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+	if (curr != idle_thread){
+		//list_push_back (&ready_list, &curr->elem);
+		void *aux=NULL;
+		list_insert_ordered(&ready_list, &curr->elem,priority_isless,aux);
+	}
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
@@ -316,6 +332,11 @@ thread_yield (void) {
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
+	struct thread* thread_temp = list_entry(list_begin(&ready_list),struct thread,elem);
+	if(thread_temp->priority>new_priority)
+	{
+		thread_yield();
+	}
 }
 
 /* Returns the current thread's priority. */
