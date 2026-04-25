@@ -64,6 +64,7 @@ static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
 void thread_sleep (int64_t ticks);
+void thread_wakeup ();
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -610,3 +611,19 @@ thread_sleep (int64_t ticks) {
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제*/
 }
 
+void 
+thread_wakeup () {
+	enum intr_level old_level = intr_disable ();	/* interrupt 방해금지모드 설정 */
+
+	int64_t cur_tics = timer_ticks();
+	struct thread * sleep_list_head = list_entry (&(sleep_list.head), struct thread, sleep_elem);
+	struct thread * t = sleep_list_head;
+
+	while (!list_empty (&sleep_list) && t->wakeup_tick <= cur_tics){//큐의 앞에 있는 스레드가 나와야한다면	
+		struct list_elem *e = list_pop_front (&sleep_list);
+		t = list_entry (e, struct thread, sleep_elem);
+		thread_unblock(t);
+	}	
+	
+	intr_set_level (old_level);						/* interrupt 방해금지모드 해제*/
+}
