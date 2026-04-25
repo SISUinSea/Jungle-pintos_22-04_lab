@@ -34,6 +34,8 @@ static struct list sleep_list;
 ```
 thread.c에 sleep_list 선언
 
+추가로, 기존 elem을 재사용하는 것보다는 sleep_elem을 따로 두는 게 안전함.
+
 ---
 # timer_sleep
 ``` C
@@ -46,6 +48,7 @@ timer_sleep (int64_t ticks) {
 	// while (timer_elapsed (start) < ticks)
 	// 	thread_yield ();
 
+	비정상적인 ticks 예외 처리
     thread_sleep (ticks); //1. block 2. sleep queue에 넣기
 
 }
@@ -77,11 +80,12 @@ timer_interrupt (struct intr_frame *args UNUSED) { //
 void
 thread_sleep (int64_t ticks) {
 
+	0. 인터럽트 disable 켜기
 	1. 일어날 로컬 틱(wakeup_tick)을 설정한다. <- (timer_ticks () + ticks)
 	2. sleep 큐에 넣는다.
-	3. 아 맞다 앞 뒤로 인터럽트 방금모 껐다 켜기
 	4. 필요한 경우 sleep_list[0]->wakeup_tick 업데이트
 	5. thread_block() 호출
+	6. 인터럽트 able
 
 }
 ```
@@ -89,10 +93,6 @@ thread_sleep (int64_t ticks) {
 
 
 # thread_wakeup
-
-thread_wakeup () 는 만들 필요 없음. 대신 timer_interrupt에 구현해야 함. 아니면 함수로 따로 구현해서 거기에 그대로 넣는 것도 좋은데??
-> 그럼 timer_interrupt에 thread_wakeup을 호출하도록 설계.
-
 ``` C
 /* Suspends execution for approximately TICKS timer ticks. */
 void
@@ -100,11 +100,10 @@ thread_wakeup () {
 
 	1. sleep_list[0]->wakeup_tick이 timer_ticks와 같거나 넘어갔다면(알람 울릴 시간)
 	2. sleep_list에서 sleep_list[0]->wakeup_tick와 기상 시각이 같은 thread들에게 깨우는 작업을 수행
-	3. 깨우는 작업이란, 다음을 의미함.
+	3. thread_unblock(t), 깨우는 작업인 이것은 다음을 의미함.
 		3.1. 쓰레드의 상태를 BLOCKED-> READY로 변경
 		3.2. ready list에 추가
-	4. sleep_list[0]->wakeup_tick을 sleep list에서 가장 빠른 시각으로 변경
-	5. 이 작업을 하는 동안, list를 만지는 동안에 interrupt는 무시한다.
+	4. 이 작업을 하는 동안, list를 만지는 동안에 interrupt는 무시한다.
 
 }
 ```
