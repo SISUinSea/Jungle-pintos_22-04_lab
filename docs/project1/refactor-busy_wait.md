@@ -129,7 +129,7 @@ set_next_wakeup_tick () {
 ```
 
 # get_wakeup_tick
-필요 할지는 의문이다.
+너무 간단해서 필요 할지는 의문이다.
 ``` C
 get_wakeup_tick (int new_wakeup_tick) {
 	return next_wakeup_tick;
