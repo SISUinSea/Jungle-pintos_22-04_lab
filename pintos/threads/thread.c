@@ -594,8 +594,8 @@ allocate_tid (void) {
 
 static bool 
 wakeup_less (const struct list_elem *a, const struct list_elem *b, void* aux UNUSED) {
-	struct thread * ta = list_entry (a, struct thread, elem);
-	struct thread * tb = list_entry (b, struct thread, elem);
+	struct thread * ta = list_entry (a, struct thread, sleep_elem);
+	struct thread * tb = list_entry (b, struct thread, sleep_elem);
 
 	return ta->wakeup_tick < tb->wakeup_tick;
 }
