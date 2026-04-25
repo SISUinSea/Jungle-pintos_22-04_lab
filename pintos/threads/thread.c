@@ -604,13 +604,13 @@ wakeup_less (const struct list_elem *a, const struct list_elem *b, void* aux UNU
 void
 thread_sleep (int64_t ticks) {
 	enum intr_level old_level = intr_disable ();	/* interrupt 방해금지모드 설정 */
+
 	struct thread * cur = thread_current();
 	int64_t start = timer_ticks ();
-	// printf("now is..... %lld\n", start);
 	cur->wakeup_tick = start + ticks;
-	// printf("===================when wakeup_tick is set.. %lld\n", cur->wakeup_tick);
 	list_insert_ordered(&sleep_list, &(cur->sleep_elem), wakeup_less, NULL);
 	thread_block ();
+
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
 }
 
@@ -618,19 +618,16 @@ void
 thread_wakeup () {
 	enum intr_level old_level = intr_disable ();	/* interrupt 방해금지모드 설정 */
 
-	int64_t cur_tics = timer_ticks ();
-	struct thread * sleep_list_head = list_entry (sleep_list.head.next, struct thread, sleep_elem);
-	struct thread * t = sleep_list_head;
+	int64_t cur_ticks = timer_ticks ();
+	struct thread* t;
 
-	// printf("DBG: tid: %lld, wakeup: %lld\n", t->tid, t->wakeup_tick);
-
-	while (!list_empty (&sleep_list) && t->wakeup_tick <= cur_tics) {//큐의 앞에 있는 스레드가 나와야한다면	
-		// printf("DBG:::: wakeup start\n");
-
-		struct list_elem *e = list_pop_front (&sleep_list);
+	while (!list_empty (&sleep_list)) { //큐의 앞에 있는 스레드가 나와야한다면	
+		struct list_elem *e = list_front (&sleep_list);
 		t = list_entry (e, struct thread, sleep_elem);
+		if (t->wakeup_tick > cur_ticks) break;
+		list_pop_front (&sleep_list);
+
 		thread_unblock (t);
 	}	
-	
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
 }
