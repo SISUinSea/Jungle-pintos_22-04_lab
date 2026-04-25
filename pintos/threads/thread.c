@@ -606,7 +606,7 @@ thread_sleep (int64_t ticks) {
 	enum intr_level old_level = intr_disable ();	/* interrupt 방해금지모드 설정 */
 	int64_t start = timer_ticks ();
 	cur->wakeup_tick = start + ticks;
-	list_insert_ordered(&sleep_list, cur->sleep_elem, wakeup_less, NULL);
+	list_insert_ordered(&sleep_list, &(cur->sleep_elem), wakeup_less, NULL);
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제*/
 }
 
