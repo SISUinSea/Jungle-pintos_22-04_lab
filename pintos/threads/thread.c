@@ -29,13 +29,15 @@
 static struct list ready_list;
 static bool priority_isless(const struct list_elem* a ,const struct list_elem* b,void* aux)
 {
-	struct thread* thread_a = list_entry(a,struct thread,elem);
-	struct thread* thread_b = list_entry(b,struct thread,elem);
+	struct thread* thread_a = list_entry(a, struct thread, elem);
+	struct thread* thread_b = list_entry(b, struct thread, elem);
 
 
-	return thread_a->priority>thread_b->priority;
+	return thread_a->priority > thread_b->priority;
 }
 static struct list sleep_list;
+
+static struct list mlfq[64];
 
 
 
@@ -133,8 +135,20 @@ thread_init (void) {
 	list_init (&ready_list);
 	list_init (&sleep_list);
 	list_init (&destruction_req);
-	//스레드 개수와 load_avg의 값을 0으로 초기화
-	ready_threads = load_avg = 0;
+	
+
+	if (thread_mlfqs)
+	{
+		//mlfq 초기화
+		for (int i=0 ; i <= PRI_MAX ; i++)
+		{
+			list_init(&mlfq[i]);
+		}
+
+		//스레드 개수와 load_avg의 값을 0으로 초기화
+		ready_threads = load_avg = 0;
+	}
+
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
 	init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -215,6 +229,12 @@ thread_create (const char *name, int priority,
 		return TID_ERROR;
 
 	/* Initialize thread. */
+
+	if (thread_mlfqs)
+	{
+		//mlfqs 모드에서는 새로 생성된 스레드의 우선도가 최상위
+		priority=PRI_MAX;
+	}
 	init_thread (t, name, priority);
 	tid = t->tid = allocate_tid ();
 
@@ -344,6 +364,10 @@ thread_yield (void) {
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
+	if (thread_mlfqs)
+	{
+		return ;
+	}
 	thread_current ()->priority = new_priority;
 	struct thread* thread_begin = list_entry (list_begin(&ready_list), struct thread, elem);
 	if(thread_begin->priority > new_priority)
@@ -463,9 +487,15 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+	
+	if (thread_mlfqs)
+	{
 	//스레드의 기본 nice=0, recent_cpu=0;
 	t->nice = t->recent_cpu = 0;
 	
+	
+
+	}
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
