@@ -28,6 +28,10 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+/* MLFQS에서 사용하는 Fixed Point */
+typedef int64_t fixed_t;				/* 타입 이름 */
+#define FIXED_SCALE 1<<14;				
+
 /* A kernel thread or user process.
  *
  * Each thread structure is stored in its own 4 kB page.  The
