@@ -121,7 +121,8 @@ thread_init (void) {
 	list_init (&ready_list);
 	list_init (&sleep_list);
 	list_init (&destruction_req);
-
+	//스레드 개수와 load_avg의 값을 0으로 초기화
+	ready_threads = load_avg = 0;
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
 	init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -434,6 +435,9 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+	//스레드의 기본 nice=0, recent_cpu=0;
+	t->nice = t->recent_cpu = 0;
+	
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should

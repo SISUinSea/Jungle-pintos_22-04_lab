@@ -29,8 +29,13 @@ typedef int tid_t;
 #define PRI_MAX 63                      /* Highest priority. */
 
 /* MLFQS에서 사용하는 Fixed Point */
-typedef int64_t fixed_t;				/* 타입 이름 */
-#define FIXED_SCALE 1<<14;				
+typedef int fixed_t;				/* 타입 이름 */
+#define FIXED_SCALE (1<<14)		
+
+//load_avg, ready_threads 선언
+static fixed_t load_avg;
+static int ready_threads;
+
 
 /* A kernel thread or user process.
  *
@@ -100,6 +105,10 @@ struct thread {
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 	struct list_elem sleep_elem;		/* Sleep List element. */
+	//recent_cpu, nice 선언
+	fixed_t recent_cpu;
+	int nice;
+
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
