@@ -156,5 +156,8 @@ void do_iret (struct intr_frame *tf);
 
 void thread_sleep (int64_t ticks);
 void thread_wakeup (void);
+struct list* high_Q(struct list *mlfqs);
+
+
 
 #endif /* threads/thread.h */

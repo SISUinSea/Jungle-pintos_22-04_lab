@@ -132,7 +132,10 @@ thread_init (void) {
 
 	/* Init the globla thread context */
 	lock_init (&tid_lock);
-	list_init (&ready_list);
+	if (!thread_mlfqs)
+	{
+		list_init (&ready_list);
+	}
 	list_init (&sleep_list);
 	list_init (&destruction_req);
 	
@@ -144,7 +147,6 @@ thread_init (void) {
 		{
 			list_init(&mlfq[i]);
 		}
-
 		//스레드 개수와 load_avg의 값을 0으로 초기화
 		ready_threads = load_avg = 0;
 	}
@@ -288,7 +290,7 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	//list_push_back (&ready_list, &t->elem);
+
 	void *aux=NULL;
 
 	if (thread_mlfqs)
@@ -399,18 +401,14 @@ thread_set_priority (int new_priority) {
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) {
-	return thread_current ()->priority;
-}
 
-/* Sets the current thread's nice value to NICE. */
-void
-thread_set_nice (int nice) {
+	//thread_mlfqs 아니면
+	if (!thread_mlfqs)
+	{
+		return thread_current ()->priority;
+	}
 
-	//현재 스레드를 thread_curr에 저장 - 함수명과 구분
 	struct thread* thread_curr = thread_current ();
-	thread_curr ->nice = nice;
-
-	//new_priority=PRI_MAX-recent_cpu/4-nice*2
 	int new_priority = fixed_convert (PRI_MAX) - thread_curr->recent_cpu/4 - fixed_convert (thread_curr->nice) * 2;
 	new_priority = fixed_to_int_zero (new_priority);
 
@@ -422,13 +420,29 @@ thread_set_nice (int nice) {
 	{
 		new_priority = 0;
 	}
+	
+	return new_priority;
+
+}
+
+/* Sets the current thread's nice value to NICE. */
+void
+thread_set_nice (int nice) {
+
+	//현재 스레드를 thread_curr에 저장 - 함수명과 구분
+	struct thread* thread_curr = thread_current ();
+	thread_curr ->nice = nice;
+
+	//new_priority=PRI_MAX-recent_cpu/4-nice*2
+	int new_priority = thread_get_priority ();
 
 	//thread_set_priority를 사용할 수 없기에 수정
 	thread_current ()->priority = new_priority;
-	struct thread* thread_begin = list_entry (list_begin(&ready_list), struct thread, elem);
+	struct thread* thread_begin = list_entry (list_begin(high_Q(mlfq)), struct thread, elem);
 	if(thread_begin->priority > new_priority)
 	{
-		thread_yield();
+
+		thread_yield ();
 	}
 
 }
@@ -531,10 +545,19 @@ init_thread (struct thread *t, const char *name, int priority) {
    idle_thread. */
 static struct thread *
 next_thread_to_run (void) {
+	if (thread_mlfqs)
+	{
+		struct list *high_list = high_Q(mlfq);
+		if (list_empty (high_list))
+		return idle_thread;
+	else
+		return list_entry (list_pop_front (high_list), struct thread, elem);
+	}
 	if (list_empty (&ready_list))
 		return idle_thread;
 	else
 		return list_entry (list_pop_front (&ready_list), struct thread, elem);
+	
 }
 
 /* Use iretq to launch the thread */
@@ -749,6 +772,22 @@ thread_wakeup () {
 	}	
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
 }
+
+struct list*
+high_Q(struct list* mlfqs)
+{
+	for(int i = PRI_MAX; i >=PRI_MIN ; i++)
+	{
+		if(!list_empty(&mlfqs[i]))
+		{
+			//우선 순위 위부터 탐색
+			return &mlfqs[i];
+		}
+	}
+	return &mlfqs[PRI_MAX];
+
+}
+
 
 fixed_t 
 fixed_convert (int n) {
