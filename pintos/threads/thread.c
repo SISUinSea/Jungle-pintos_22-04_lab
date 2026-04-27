@@ -79,9 +79,6 @@ fixed_t fixed_multiply (fixed_t,fixed_t);
 fixed_t fixed_divide (fixed_t,fixed_t);
 int fixed_to_int_zero (fixed_t);
 int fixed_to_int_nearest (fixed_t);
-//load_avg, ready_threads 선언
-static fixed_t load_avg;
-static int ready_threads;
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
 
