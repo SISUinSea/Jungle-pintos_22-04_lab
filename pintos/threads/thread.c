@@ -37,6 +37,8 @@ static bool priority_isless(const struct list_elem* a ,const struct list_elem* b
 }
 static struct list sleep_list;
 
+
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -62,6 +64,9 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
+
+static int ready_threads;			/* ready list에 있는 thread 개수 */
+static fixed_t load_avg;			/* ready list에 있는 thread 개수가 클수록 큰 값을 가짐*/
 
 static void kernel_thread (thread_func *, void *aux);
 
