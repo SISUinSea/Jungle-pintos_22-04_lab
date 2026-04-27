@@ -29,8 +29,8 @@ typedef int tid_t;
 #define PRI_MAX 63                      /* Highest priority. */
 
 /* MLFQS에서 사용하는 Fixed Point */
-typedef int64_t fixed_t;				/* 타입 이름 */
-#define FIXED_SCALE 1<<14;				
+typedef int fixed_t;				/* 타입 이름 */
+#define FIXED_SCALE (1 << 14)
 
 /* A kernel thread or user process.
  *
