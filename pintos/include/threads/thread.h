@@ -32,6 +32,9 @@ typedef int tid_t;
 typedef int fixed_t;				/* 타입 이름 */
 #define FIXED_SCALE (1 << 14)
 
+//load_avg, ready_threads 선언
+static fixed_t load_avg;
+static int ready_threads;
 
 /* A kernel thread or user process.
  *

@@ -37,8 +37,6 @@ static bool priority_isless(const struct list_elem* a ,const struct list_elem* b
 }
 static struct list sleep_list;
 
-
-
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -65,9 +63,6 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
-static int ready_threads;			/* ready list에 있는 thread 개수 */
-static fixed_t load_avg;			/* ready list에 있는 thread 개수가 클수록 큰 값을 가짐*/
-
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -79,8 +74,6 @@ static tid_t allocate_tid (void);
 void thread_sleep (int64_t ticks);
 void thread_wakeup (void);
 
-
-/* MLFQS에서 사용하는 Fixed Point 연산을 위한 helper functions */
 fixed_t fixed_convert (int);
 fixed_t fixed_multiply (fixed_t,fixed_t);
 fixed_t fixed_divide (fixed_t,fixed_t);
@@ -375,13 +368,15 @@ thread_get_nice (void) {
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) {
-	return fixed_to_int_nearest((load_avg) * 100);
+	/* TODO: Your implementation goes here */
+	return 0;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) {
-	return fixed_to_int_nearest((thread_current ()->recent_cpu) * 100);
+	/* TODO: Your implementation goes here */
+	return 0;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -667,6 +662,7 @@ thread_wakeup () {
 	}	
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
 }
+
 
 fixed_t 
 fixed_convert (int n) {
