@@ -375,13 +375,13 @@ thread_get_nice (void) {
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) {
-	return fixed_to_int_nearest((load_avg) * 100);
+	return fixed_to_int_nearest(load_avg * 100);
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) {
-	return fixed_to_int_nearest((thread_current ()->recent_cpu) * 100);
+	return fixed_to_int_nearest(thread_current ()->recent_cpu * 100);
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
