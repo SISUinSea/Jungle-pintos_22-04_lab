@@ -86,7 +86,6 @@ fixed_t fixed_multiply (fixed_t,fixed_t);
 fixed_t fixed_divide (fixed_t,fixed_t);
 int fixed_to_int_zero (fixed_t);
 int fixed_to_int_nearest (fixed_t);
-
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
 
@@ -346,8 +345,8 @@ thread_yield (void) {
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
-	struct thread* thread_temp = list_entry(list_begin(&ready_list),struct thread,elem);
-	if(thread_temp->priority>new_priority)
+	struct thread* thread_begin = list_entry (list_begin(&ready_list), struct thread, elem);
+	if(thread_begin->priority > new_priority)
 	{
 		thread_yield();
 	}
@@ -361,15 +360,33 @@ thread_get_priority (void) {
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) {
-	/* TODO: Your implementation goes here */
+thread_set_nice (int nice) {
+
+	//현재 스레드를 thread_curr에 저장 - 함수명과 구분
+	struct thread* thread_curr = thread_current ();
+	thread_curr ->nice = nice;
+
+	//new_priority=PRI_MAX-recent_cpu/4-nice*2
+	int new_priority = fixed_convert (PRI_MAX) - thread_curr->recent_cpu/4 - fixed_convert (thread_curr->nice) * 2;
+	new_priority = fixed_to_int_zero (new_priority);
+
+	if(new_priority > 63)
+	{
+		new_priority = 63;
+	}
+	if(new_priority < 0)
+	{
+		new_priority = 0;
+	}
+
+	thread_set_priority(new_priority);
+
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) {
-	/* TODO: Your implementation goes here */
-	return 0;
+	return thread_current () -> nice;
 }
 
 /* Returns 100 times the system load average. */
