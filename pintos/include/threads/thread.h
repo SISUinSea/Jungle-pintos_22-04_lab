@@ -30,12 +30,7 @@ typedef int tid_t;
 
 /* MLFQS에서 사용하는 Fixed Point */
 typedef int fixed_t;				/* 타입 이름 */
-#define FIXED_SCALE (1<<14)		
-
-//load_avg, ready_threads 선언
-static fixed_t load_avg;
-static int ready_threads;
-
+#define FIXED_SCALE (1 << 14)
 
 /* A kernel thread or user process.
  *
