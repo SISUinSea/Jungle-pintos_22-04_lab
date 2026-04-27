@@ -74,6 +74,8 @@ static tid_t allocate_tid (void);
 void thread_sleep (int64_t ticks);
 void thread_wakeup (void);
 
+
+/* MLFQS에서 사용하는 Fixed Point 연산을 위한 helper functions */
 fixed_t fixed_convert (int);
 fixed_t fixed_multiply (fixed_t,fixed_t);
 fixed_t fixed_divide (fixed_t,fixed_t);
