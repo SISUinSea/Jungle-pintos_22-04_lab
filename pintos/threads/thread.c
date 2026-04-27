@@ -39,8 +39,6 @@ static struct list sleep_list;
 
 static struct list mlfq[64];
 
-
-
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -80,7 +78,7 @@ static void schedule (void);
 static tid_t allocate_tid (void);
 void thread_sleep (int64_t ticks);
 void thread_wakeup (void);
-
+static struct list temp_mlfqs[64];
 
 /* MLFQS에서 사용하는 Fixed Point 연산을 위한 helper functions */
 fixed_t fixed_convert (int);
@@ -192,8 +190,18 @@ thread_tick (void) {
 
 	/* Enforce preemption. */
 	if (++thread_ticks >= TIME_SLICE)
+	{
 		intr_yield_on_return ();
+		if(thread_mlfqs)
+		{
+			enum intr_level old_level;
+			old_level = intr_disable ();
+			priority_all_update(mlfq);
+			intr_set_level (old_level);
+		}
+	}
 }
+
 
 /* Prints thread statistics. */
 void
@@ -412,13 +420,13 @@ thread_get_priority (void) {
 	int new_priority = fixed_convert (PRI_MAX) - thread_curr->recent_cpu/4 - fixed_convert (thread_curr->nice) * 2;
 	new_priority = fixed_to_int_zero (new_priority);
 
-	if(new_priority > 63)
+	if(new_priority > PRI_MAX)
 	{
-		new_priority = 63;
+		new_priority = PRI_MAX;
 	}
-	if(new_priority < 0)
+	if(new_priority < PRI_MIN)
 	{
-		new_priority = 0;
+		new_priority = PRI_MIN;
 	}
 	
 	return new_priority;
@@ -775,11 +783,55 @@ thread_wakeup () {
 	}	
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
 }
+void priority_all_update(struct list mlfqs[64]){
+
+
+	for(int i = 0 ; i <= PRI_MAX ; i++)
+	{
+		list_init(&temp_mlfqs[i]);
+	}
+
+	for(int i = 0 ; i <= PRI_MAX ; i++){
+
+		struct list_elem *e;
+		while (!list_empty(&mlfqs[i]))
+		{
+			e=list_pop_front(&mlfqs[i]);
+			struct thread *nowthread = list_entry(e, struct thread, elem);
+			int new_priority = fixed_convert (PRI_MAX) - nowthread->recent_cpu/4 - fixed_convert (nowthread->nice) * 2;
+			new_priority = fixed_to_int_zero (new_priority);
+
+			if(new_priority > PRI_MAX)
+			{
+				new_priority = PRI_MAX;
+			}
+
+			if(new_priority < PRI_MIN)
+			{
+				new_priority = PRI_MIN;
+			}
+			if(nowthread->priority!=new_priority)
+			{
+				nowthread->priority=new_priority;
+			}
+			list_push_back (&temp_mlfqs[new_priority], e);
+		}
+	}
+	for(int i = 0 ; i <= PRI_MAX ; i++)
+	{
+    	while (!list_empty(&temp_mlfqs[i]))
+		{
+			struct list_elem *e = list_pop_front(&temp_mlfqs[i]);
+			list_push_back(&mlfqs[i], e);
+		}
+	}
+}
+
 
 struct list*
 high_Q(struct list* mlfqs)
 {
-	for(int i = PRI_MAX; i >=PRI_MIN ; i++)
+	for(int i = PRI_MAX; i >=PRI_MIN ; i--)
 	{
 		if(!list_empty(&mlfqs[i]))
 		{
