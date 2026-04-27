@@ -296,7 +296,7 @@ thread_unblock (struct thread *t) {
 	if (thread_mlfqs)
 	{
 		//mlfq[priority]에 삽입
-		list_mlfqs_insert (&mlfq, &t->elem, t->priority, NULL);
+		list_mlfqs_insert (mlfq, &t->elem, t->priority, NULL);
 	}
 	else
 	{
@@ -369,7 +369,7 @@ thread_yield (void) {
 		if (thread_mlfqs)
 		{
 			//mlfq[priority]에 삽입
-			list_mlfqs_insert (&mlfq, &curr->elem, curr->priority, NULL);
+			list_mlfqs_insert (mlfq, &curr->elem, curr->priority, NULL);
 		}
 
 		else
@@ -438,11 +438,14 @@ thread_set_nice (int nice) {
 
 	//thread_set_priority를 사용할 수 없기에 수정
 	thread_current ()->priority = new_priority;
-	struct thread* thread_begin = list_entry (list_begin(high_Q(mlfq)), struct thread, elem);
-	if(thread_begin->priority > new_priority)
-	{
+	struct list *list_be = high_Q(mlfq);
+	if(!list_empty(list_be)){
+		struct thread* thread_begin = list_entry (list_begin(list_be), struct thread, elem);
+		if(thread_begin->priority > new_priority)
+		{
 
-		thread_yield ();
+			thread_yield ();
+		}
 	}
 
 }
@@ -765,7 +768,7 @@ thread_wakeup () {
 		{
 			if(t->priority > thread_current()->priority)
 			{
-				thread_yield();
+				intr_yield_on_return();
 			}
 		}
 

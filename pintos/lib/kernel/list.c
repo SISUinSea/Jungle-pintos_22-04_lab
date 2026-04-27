@@ -434,16 +434,15 @@ list_insert_ordered (struct list *list, struct list_elem *elem,
 	mlfqs 전용 입력 생성
 */
 void
-list_mlfqs_insert (struct list **mlfq, struct list_elem *elems,
+list_mlfqs_insert (struct list mlfq[64], struct list_elem *elems,
 		int priority, void *aux UNUSED) {
-
-	struct list_elem **mlfque=mlfq;
 
 	ASSERT (mlfq != NULL);
 	ASSERT (elems != NULL);
-	ASSERT (priority != NULL);
+	if(priority>63) priority = 63;
+	if(priority<0) priority = 0;
 
-	return list_push_back (mlfq[priority], elems);
+	return list_push_back (&mlfq[priority], elems);
 }
 
 
