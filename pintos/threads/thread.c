@@ -290,7 +290,16 @@ thread_unblock (struct thread *t) {
 	ASSERT (t->status == THREAD_BLOCKED);
 	//list_push_back (&ready_list, &t->elem);
 	void *aux=NULL;
-	list_insert_ordered(&ready_list, &t->elem,priority_isless,aux);
+
+	if (thread_mlfqs)
+	{
+		//mlfq[priority]에 삽입
+		list_mlfqs_insert (&mlfq, &t->elem, t->priority, NULL);
+	}
+	else
+	{
+		list_insert_ordered(&ready_list, &t->elem, priority_isless, aux);
+	}
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -352,10 +361,21 @@ thread_yield (void) {
 	ASSERT (!intr_context ());
 
 	old_level = intr_disable ();
-	if (curr != idle_thread){
-		//list_push_back (&ready_list, &curr->elem);
-		void *aux=NULL;
-		list_insert_ordered(&ready_list, &curr->elem,priority_isless,aux);
+	if (curr != idle_thread)
+	{
+
+		if (thread_mlfqs)
+		{
+			//mlfq[priority]에 삽입
+			list_mlfqs_insert (&mlfq, &curr->elem, curr->priority, NULL);
+		}
+
+		else
+		{
+			void *aux=NULL;
+			list_insert_ordered(&ready_list, &curr->elem,priority_isless,aux);
+		}
+
 	}
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
@@ -717,6 +737,15 @@ thread_wakeup () {
 		list_pop_front (&sleep_list);
 
 		thread_unblock (t);
+
+		if (thread_mlfqs)
+		{
+			if(t->priority > thread_current()->priority)
+			{
+				thread_yield();
+			}
+		}
+
 	}	
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
 }

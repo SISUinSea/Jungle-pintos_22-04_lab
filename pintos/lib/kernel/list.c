@@ -430,6 +430,23 @@ list_insert_ordered (struct list *list, struct list_elem *elem,
 	return list_insert (e, elem);
 }
 
+/* 
+	mlfqs 전용 입력 생성
+*/
+void
+list_mlfqs_insert (struct list **mlfq, struct list_elem *elems,
+		int priority, void *aux UNUSED) {
+
+	struct list_elem **mlfque=mlfq;
+
+	ASSERT (mlfq != NULL);
+	ASSERT (elems != NULL);
+	ASSERT (priority != NULL);
+
+	return list_push_back (mlfq[priority], elems);
+}
+
+
 /* Iterates through LIST and removes all but the first in each
    set of adjacent elements that are equal according to LESS
    given auxiliary data AUX.  If DUPLICATES is non-null, then the
