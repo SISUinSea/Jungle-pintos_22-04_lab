@@ -74,6 +74,12 @@ static tid_t allocate_tid (void);
 void thread_sleep (int64_t ticks);
 void thread_wakeup (void);
 
+fixed_t fixed_convert (int);
+fixed_t fixed_multiply (fixed_t,fixed_t);
+fixed_t fixed_divide (fixed_t,fixed_t);
+int fixed_to_int_zero (fixed_t);
+int fixed_to_int_nearest (fixed_t);
+
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
 
@@ -651,4 +657,33 @@ thread_wakeup () {
 		thread_unblock (t);
 	}	
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
+}
+
+
+fixed_t 
+fixed_convert (int n) {
+
+	return ((fixed_t) n) * FIXED_SCALE;
+}
+
+fixed_t 
+fixed_multiply (fixed_t x, fixed_t y) {
+	return (fixed_t) (((int64_t) x) * y / FIXED_SCALE);
+}
+
+fixed_t 
+fixed_divide (fixed_t x, fixed_t y) {
+	return (fixed_t) ((((int64_t) x) * FIXED_SCALE) / y);
+}
+
+int 
+fixed_to_int_zero (fixed_t x) {
+	return x / FIXED_SCALE;
+}
+int fixed_to_int_nearest (fixed_t x) {
+	if (x >= 0) {
+		return (x + FIXED_SCALE  / 2) / FIXED_SCALE;
+	} else {
+		return (x - FIXED_SCALE  / 2) / FIXED_SCALE;
+	}
 }
