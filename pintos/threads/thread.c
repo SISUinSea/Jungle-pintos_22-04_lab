@@ -403,7 +403,13 @@ thread_set_nice (int nice) {
 		new_priority = 0;
 	}
 
-	thread_set_priority(new_priority);
+	//thread_set_priority를 사용할 수 없기에 수정
+	thread_current ()->priority = new_priority;
+	struct thread* thread_begin = list_entry (list_begin(&ready_list), struct thread, elem);
+	if(thread_begin->priority > new_priority)
+	{
+		thread_yield();
+	}
 
 }
 
