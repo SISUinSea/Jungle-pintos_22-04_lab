@@ -1,5 +1,3 @@
-#define MLFQS
-
 #include "threads/thread.h"
 #include <debug.h>
 #include <stddef.h>
@@ -76,13 +74,11 @@ static tid_t allocate_tid (void);
 void thread_sleep (int64_t ticks);
 void thread_wakeup (void);
 
-#ifdef MLFQS
-	fixed_t fixed_convert (int);
-	fixed_t fixed_multiply (fixed_t,fixed_t);
-	fixed_t fixed_divide (fixed_t,fixed_t);
-	int fixed_to_int_zero (fixed_t);
-	int fixed_to_int_nearest (fixed_t);
-#endif
+fixed_t fixed_convert (int);
+fixed_t fixed_multiply (fixed_t,fixed_t);
+fixed_t fixed_divide (fixed_t,fixed_t);
+int fixed_to_int_zero (fixed_t);
+int fixed_to_int_nearest (fixed_t);
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -663,32 +659,31 @@ thread_wakeup () {
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
 }
 
-#ifdef MLFQS
-	fixed_t 
-	fixed_convert (int n) {
 
-		return ((fixed_t) n) * FIXED_SCALE;
-	}
+fixed_t 
+fixed_convert (int n) {
 
-	fixed_t 
-	fixed_multiply (fixed_t x, fixed_t y) {
-		return (fixed_t) (((int64_t) x) * y / FIXED_SCALE);
-	}
+	return ((fixed_t) n) * FIXED_SCALE;
+}
 
-	fixed_t 
-	fixed_divide (fixed_t x, fixed_t y) {
-		return (fixed_t) ((((int64_t) x) * FIXED_SCALE) / y);
-	}
+fixed_t 
+fixed_multiply (fixed_t x, fixed_t y) {
+	return (fixed_t) (((int64_t) x) * y / FIXED_SCALE);
+}
 
-	int 
-	fixed_to_int_zero (fixed_t x) {
-		return x / FIXED_SCALE;
+fixed_t 
+fixed_divide (fixed_t x, fixed_t y) {
+	return (fixed_t) ((((int64_t) x) * FIXED_SCALE) / y);
+}
+
+int 
+fixed_to_int_zero (fixed_t x) {
+	return x / FIXED_SCALE;
+}
+int fixed_to_int_nearest (fixed_t x) {
+	if (x >= 0) {
+		return (x + FIXED_SCALE  / 2) / FIXED_SCALE;
+	} else {
+		return (x - FIXED_SCALE  / 2) / FIXED_SCALE;
 	}
-	int fixed_to_int_nearest (fixed_t x) {
-		if (x >= 0) {
-			return (x + FIXED_SCALE  / 2) / FIXED_SCALE;
-		} else {
-			return (x - FIXED_SCALE  / 2) / FIXED_SCALE;
-		}
-	}
-#endif
+}
