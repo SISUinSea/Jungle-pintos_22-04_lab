@@ -338,8 +338,8 @@ thread_yield (void) {
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
-	struct thread* thread_begin = list_entry(list_begin(&ready_list),struct thread,elem);
-	if(thread_begin->priority>new_priority)
+	struct thread* thread_begin = list_entry (list_begin(&ready_list), struct thread, elem);
+	if(thread_begin->priority > new_priority)
 	{
 		thread_yield();
 	}
@@ -354,7 +354,6 @@ thread_get_priority (void) {
 /* Sets the current thread's nice value to NICE. */
 void
 thread_set_nice (int nice) {
-	/* TODO: Your implementation goes here */
 
 	//현재 스레드를 thread_curr에 저장 - 함수명과 구분
 	struct thread* thread_curr = thread_current ();
@@ -380,7 +379,6 @@ thread_set_nice (int nice) {
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) {
-	/* TODO: Your implementation goes here */
 	return thread_current () -> nice;
 }
 
