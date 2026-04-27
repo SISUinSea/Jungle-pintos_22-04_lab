@@ -36,6 +36,7 @@ static bool priority_isless(const struct list_elem* a ,const struct list_elem* b
 	return thread_a->priority>thread_b->priority;
 }
 static struct list sleep_list;
+static struct list all_list;
 
 
 
@@ -130,6 +131,7 @@ thread_init (void) {
 
 	/* Init the globla thread context */
 	lock_init (&tid_lock);
+	list_init (&all_list);
 	list_init (&ready_list);
 	list_init (&sleep_list);
 	list_init (&destruction_req);
@@ -318,6 +320,7 @@ thread_exit (void) {
 	/* Just set our status to dying and schedule another process.
 	   We will be destroyed during the call to schedule_tail(). */
 	intr_disable ();
+	list_remove(&(thread_current ()->all_elem));
 	do_schedule (THREAD_DYING);
 	NOT_REACHED ();
 }
@@ -465,6 +468,12 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->magic = THREAD_MAGIC;
 	//스레드의 기본 nice=0, recent_cpu=0;
 	t->nice = t->recent_cpu = 0;
+
+	enum intr_level old_level = intr_disable ();	/* interrupt 방해금지모드 설정 */
+
+	list_push_back(&all_list, &(t->all_elem));
+
+	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
 	
 }
 
