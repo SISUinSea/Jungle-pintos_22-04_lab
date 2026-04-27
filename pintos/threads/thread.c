@@ -375,15 +375,13 @@ thread_get_nice (void) {
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) {
-	/* TODO: Your implementation goes here */
-	return 0;
+	return fixed_to_int_nearest((load_avg) * 100);
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) {
-	/* TODO: Your implementation goes here */
-	return 0;
+	return fixed_to_int_nearest((thread_current ()->recent_cpu) * 100);
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -669,7 +667,6 @@ thread_wakeup () {
 	}	
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
 }
-
 
 fixed_t 
 fixed_convert (int n) {
