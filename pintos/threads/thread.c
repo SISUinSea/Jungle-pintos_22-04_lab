@@ -29,16 +29,16 @@
 static struct list ready_list;
 static bool priority_isless(const struct list_elem* a ,const struct list_elem* b,void* aux)
 {
-	struct thread* thread_a = list_entry(a,struct thread,elem);
-	struct thread* thread_b = list_entry(b,struct thread,elem);
+	struct thread* thread_a = list_entry(a, struct thread, elem);
+	struct thread* thread_b = list_entry(b, struct thread, elem);
 
 
-	return thread_a->priority>thread_b->priority;
+	return thread_a->priority > thread_b->priority;
 }
 static struct list sleep_list;
 static struct list all_list;
 
-
+static struct list mlfq[64];
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -79,7 +79,7 @@ static void schedule (void);
 static tid_t allocate_tid (void);
 void thread_sleep (int64_t ticks);
 void thread_wakeup (void);
-
+static struct list temp_mlfqs[64];
 
 /* MLFQS에서 사용하는 Fixed Point 연산을 위한 helper functions */
 fixed_t fixed_convert (int);
@@ -131,12 +131,26 @@ thread_init (void) {
 
 	/* Init the globla thread context */
 	lock_init (&tid_lock);
+	if (!thread_mlfqs)
+	{
+		list_init (&ready_list);
+	}
 	list_init (&all_list);
-	list_init (&ready_list);
 	list_init (&sleep_list);
 	list_init (&destruction_req);
-	//스레드 개수와 load_avg의 값을 0으로 초기화
-	ready_threads = load_avg = 0;
+	
+
+	if (thread_mlfqs)
+	{
+		//mlfq 초기화
+		for (int i=0 ; i <= PRI_MAX ; i++)
+		{
+			list_init(&mlfq[i]);
+		}
+		//스레드 개수와 load_avg의 값을 0으로 초기화
+		ready_threads = load_avg = 0;
+	}
+
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
 	init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -178,8 +192,18 @@ thread_tick (void) {
 
 	/* Enforce preemption. */
 	if (++thread_ticks >= TIME_SLICE)
+	{
 		intr_yield_on_return ();
+		if(thread_mlfqs)
+		{
+			enum intr_level old_level;
+			old_level = intr_disable ();
+			priority_all_update(mlfq);
+			intr_set_level (old_level);
+		}
+	}
 }
+
 
 /* Prints thread statistics. */
 void
@@ -217,6 +241,12 @@ thread_create (const char *name, int priority,
 		return TID_ERROR;
 
 	/* Initialize thread. */
+
+	if (thread_mlfqs)
+	{
+		//mlfqs 모드에서는 새로 생성된 스레드의 우선도가 최상위
+		priority=PRI_MAX;
+	}
 	init_thread (t, name, priority);
 	tid = t->tid = allocate_tid ();
 
@@ -270,9 +300,18 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	//list_push_back (&ready_list, &t->elem);
+
 	void *aux=NULL;
-	list_insert_ordered(&ready_list, &t->elem,priority_isless,aux);
+
+	if (thread_mlfqs)
+	{
+		//mlfq[priority]에 삽입
+		list_mlfqs_insert (mlfq, &t->elem, t->priority, NULL);
+	}
+	else
+	{
+		list_insert_ordered(&ready_list, &t->elem, priority_isless, aux);
+	}
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -335,10 +374,21 @@ thread_yield (void) {
 	ASSERT (!intr_context ());
 
 	old_level = intr_disable ();
-	if (curr != idle_thread){
-		//list_push_back (&ready_list, &curr->elem);
-		void *aux=NULL;
-		list_insert_ordered(&ready_list, &curr->elem,priority_isless,aux);
+	if (curr != idle_thread)
+	{
+
+		if (thread_mlfqs)
+		{
+			//mlfq[priority]에 삽입
+			list_mlfqs_insert (mlfq, &curr->elem, curr->priority, NULL);
+		}
+
+		else
+		{
+			void *aux=NULL;
+			list_insert_ordered(&ready_list, &curr->elem,priority_isless,aux);
+		}
+
 	}
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
@@ -347,6 +397,10 @@ thread_yield (void) {
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
+	if (thread_mlfqs)
+	{
+		return ;
+	}
 	thread_current ()->priority = new_priority;
 	struct thread* thread_begin = list_entry (list_begin(&ready_list), struct thread, elem);
 	if(thread_begin->priority > new_priority)
@@ -358,7 +412,28 @@ thread_set_priority (int new_priority) {
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) {
-	return thread_current ()->priority;
+
+	//thread_mlfqs 아니면
+	if (!thread_mlfqs)
+	{
+		return thread_current ()->priority;
+	}
+
+	struct thread* thread_curr = thread_current ();
+	int new_priority = fixed_convert (PRI_MAX) - thread_curr->recent_cpu/4 - fixed_convert (thread_curr->nice) * 2;
+	new_priority = fixed_to_int_zero (new_priority);
+
+	if(new_priority > PRI_MAX)
+	{
+		new_priority = PRI_MAX;
+	}
+	if(new_priority < PRI_MIN)
+	{
+		new_priority = PRI_MIN;
+	}
+	
+	return new_priority;
+
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -370,19 +445,19 @@ thread_set_nice (int nice) {
 	thread_curr ->nice = nice;
 
 	//new_priority=PRI_MAX-recent_cpu/4-nice*2
-	int new_priority = fixed_convert (PRI_MAX) - thread_curr->recent_cpu/4 - fixed_convert (thread_curr->nice) * 2;
-	new_priority = fixed_to_int_zero (new_priority);
+	int new_priority = thread_get_priority ();
 
-	if(new_priority > 63)
-	{
-		new_priority = 63;
-	}
-	if(new_priority < 0)
-	{
-		new_priority = 0;
-	}
+	//thread_set_priority를 사용할 수 없기에 수정
+	thread_current ()->priority = new_priority;
+	struct list *list_be = high_Q(mlfq);
+	if(!list_empty(list_be)){
+		struct thread* thread_begin = list_entry (list_begin(list_be), struct thread, elem);
+		if(thread_begin->priority > new_priority)
+		{
 
-	thread_set_priority(new_priority);
+			thread_yield ();
+		}
+	}
 
 }
 
@@ -466,6 +541,9 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+	
+	if (thread_mlfqs)
+	{
 	//스레드의 기본 nice=0, recent_cpu=0;
 	t->nice = t->recent_cpu = 0;
 
@@ -475,6 +553,9 @@ init_thread (struct thread *t, const char *name, int priority) {
 
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
 	
+	
+
+	}
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -484,10 +565,19 @@ init_thread (struct thread *t, const char *name, int priority) {
    idle_thread. */
 static struct thread *
 next_thread_to_run (void) {
+	if (thread_mlfqs)
+	{
+		struct list *high_list = high_Q(mlfq);
+		if (list_empty (high_list))
+		return idle_thread;
+	else
+		return list_entry (list_pop_front (high_list), struct thread, elem);
+	}
 	if (list_empty (&ready_list))
 		return idle_thread;
 	else
 		return list_entry (list_pop_front (&ready_list), struct thread, elem);
+	
 }
 
 /* Use iretq to launch the thread */
@@ -690,9 +780,78 @@ thread_wakeup () {
 		list_pop_front (&sleep_list);
 
 		thread_unblock (t);
+
+		if (thread_mlfqs)
+		{
+			if(t->priority > thread_current()->priority)
+			{
+				intr_yield_on_return();
+			}
+		}
+
 	}	
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
 }
+void priority_all_update(struct list mlfqs[64]){
+
+
+	for(int i = 0 ; i <= PRI_MAX ; i++)
+	{
+		list_init(&temp_mlfqs[i]);
+	}
+
+	for(int i = 0 ; i <= PRI_MAX ; i++){
+
+		struct list_elem *e;
+		while (!list_empty(&mlfqs[i]))
+		{
+			e=list_pop_front(&mlfqs[i]);
+			struct thread *nowthread = list_entry(e, struct thread, elem);
+			int new_priority = fixed_convert (PRI_MAX) - nowthread->recent_cpu/4 - fixed_convert (nowthread->nice) * 2;
+			new_priority = fixed_to_int_zero (new_priority);
+
+			if(new_priority > PRI_MAX)
+			{
+				new_priority = PRI_MAX;
+			}
+
+			if(new_priority < PRI_MIN)
+			{
+				new_priority = PRI_MIN;
+			}
+			if(nowthread->priority!=new_priority)
+			{
+				nowthread->priority=new_priority;
+			}
+			list_push_back (&temp_mlfqs[new_priority], e);
+		}
+	}
+	for(int i = 0 ; i <= PRI_MAX ; i++)
+	{
+    	while (!list_empty(&temp_mlfqs[i]))
+		{
+			struct list_elem *e = list_pop_front(&temp_mlfqs[i]);
+			list_push_back(&mlfqs[i], e);
+		}
+	}
+}
+
+
+struct list*
+high_Q(struct list* mlfqs)
+{
+	for(int i = PRI_MAX; i >=PRI_MIN ; i--)
+	{
+		if(!list_empty(&mlfqs[i]))
+		{
+			//우선 순위 위부터 탐색
+			return &mlfqs[i];
+		}
+	}
+	return &mlfqs[PRI_MAX];
+
+}
+
 
 fixed_t 
 fixed_convert (int n) {
