@@ -856,6 +856,43 @@ high_Q(struct list* mlfqs)
 
 }
 
+void 
+mlfqs_update_all_per_sec(void) {
+	enum intr_level old_level;
+	old_level = intr_disable ();
+	
+	ready_threads = 0;
+	struct thread* t;
+
+	for (t = list_begin(&all_list); t != list_end(&all_list); t = list_next(t)) {
+		if (t == idle_thread) {
+			continue;
+		}
+		if (t->status == THREAD_RUNNING || t->status == THREAD_READY) {
+			ready_threads ++;
+		}
+	}
+
+	/*
+
+	load_avg = (59 / 60) * load_avg + (1 / 60) * ready_threads;
+	recent_cpu = (2 * load_avg) / (2 * load_avg + 1) * recent_cpu + nice;
+
+	 */
+	load_avg = fixed_multiply(fixed_divide(fixed_convert(59), fixed_convert(60)), load_avg) 
+				+ fixed_multiply(fixed_divide(fixed_convert(1), fixed_convert(60)), fixed_convert(ready_threads));
+	
+	fixed_t coefficient = fixed_divide(fixed_multiply(fixed_convert(2), load_avg), (fixed_multiply(fixed_convert(2), load_avg) + fixed_convert(1)));
+	
+	for (t = list_begin(&all_list); t != list_end(&all_list); t = list_next(t)) {
+		if (t != idle_thread) {
+			t->recent_cpu = fixed_multiply(coefficient, t->recent_cpu) + fixed_convert(t->nice);	
+		}
+	}
+	intr_set_level (old_level);
+}
+
+
 
 fixed_t 
 fixed_convert (int n) {

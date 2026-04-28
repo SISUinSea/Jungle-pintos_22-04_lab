@@ -160,5 +160,7 @@ void thread_wakeup (void);
 struct list* high_Q(struct list *mlfqs);
 void priority_all_update(struct list mlfqs[64]);
 
+void mlfqs_update_all_per_sec(void);
+
 
 #endif /* threads/thread.h */
