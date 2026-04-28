@@ -175,6 +175,10 @@ thread_tick (void) {
 #endif
 	else
 		kernel_ticks++;
+		
+	if (t != idle_thread && thread_mlfqs == true) {
+		t->recent_cpu += fixed_convert (1);
+	}
 
 	/* Enforce preemption. */
 	if (++thread_ticks >= TIME_SLICE)
