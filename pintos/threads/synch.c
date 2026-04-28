@@ -32,10 +32,10 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
-static bool priority_isless(const struct list_elem* a ,const struct list_elem* b,void* aux)
+static bool priority_more_func(const struct list_elem* a ,const struct list_elem* b,void* aux)
 {
-	struct thread* thread_a = list_entry(a,struct thread,semaphore_elem->semaphore->elem);
-	struct thread* thread_b = list_entry(b,struct thread,semaphore_elem->semaphore->elem);
+	struct thread* thread_a = list_entry(a,struct thread,elem);
+	struct thread* thread_b = list_entry(b,struct thread,elem);
 
 	return thread_a->priority>thread_b->priority;
 }
@@ -74,7 +74,7 @@ sema_down (struct semaphore *sema) {
 
 	old_level = intr_disable ();
 	while (sema->value == 0) {
-		list_insert_ordered(&(sema->waiters), &thread_current()->elem, priority_isless, NULL);
+		list_insert_ordered(&(sema->waiters), &thread_current()->elem, priority_more_func, NULL);
 		thread_block ();
 	}
 	sema->value--;
@@ -118,7 +118,7 @@ sema_up (struct semaphore *sema) {
 
 	old_level = intr_disable ();
 	if (!list_empty (&sema->waiters)){
-		list_sort (&(sema->waiters), priority_isless, NULL);
+		list_sort (&(sema->waiters), priority_more_func, NULL);
 		thread_unblock (list_entry (list_pop_front (&sema->waiters), struct thread, elem));
 	}
 	sema->value++;
@@ -252,6 +252,20 @@ struct semaphore_elem {
 	struct semaphore semaphore;         /* This semaphore. */
 };
 
+static bool priority_more_semaphore_elem_func(const struct list_elem* semaphore_elem_elem_a,const struct list_elem* semaphore_elem_elem_b,void* aux)
+{
+	struct semaphore_elem* semaphore_elem_a = list_entry(semaphore_elem_elem_a, struct semaphore_elem, elem);
+	struct semaphore_elem* semaphore_elem_b = list_entry(semaphore_elem_elem_b, struct semaphore_elem, elem);
+
+	struct list_elem* thread_elem_a = list_front(&semaphore_elem_a->semaphore.waiters);
+	struct list_elem* thread_elem_b = list_front(&semaphore_elem_b->semaphore.waiters);
+
+	struct thread* thread_a = list_entry(thread_elem_a, struct thread, elem);
+	struct thread* thread_b = list_entry(thread_elem_b, struct thread, elem);
+
+	return thread_a->priority>thread_b->priority;
+}
+
 /* Initializes condition variable COND.  A condition variable
    allows one piece of code to signal a condition and cooperating
    code to receive the signal and act upon it. */
@@ -294,7 +308,7 @@ cond_wait (struct condition *cond, struct lock *lock) {
 	sema_init (&waiter.semaphore, 0);
 	//list_push_back (&cond->waiters, &waiter.elem);
 
-	list_insert_ordered(&cond->waiters, &waiter.elem, priority_isless, NULL); // list_insert_ordered(&리스트, &넣을_구조체->elem, 비교함수, NULL);
+	list_insert_ordered(&cond->waiters, &waiter.elem, priority_more_semaphore_elem_func, NULL); // list_insert_ordered(&리스트, &넣을_구조체->elem, 비교함수, NULL);
 	printf("[cond_wait] thread=%s pri=%d cond_waiters=%d\n", // 현재 스레드, 그스레드의 우선순위, 지금까지 몇명 들어왔는지
        thread_current()->name,
        thread_current()->priority,
@@ -328,7 +342,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 	ASSERT (lock_held_by_current_thread (lock));
 
 	if (!list_empty (&cond->waiters)){
-		list_sort (&(cond->waiters), priority_isless, NULL); // list_sort(&정렬할_리스트, 비교함수, NULL);
+		list_sort (&(cond->waiters), priority_more_semaphore_elem_func, NULL); // list_sort(&정렬할_리스트, 비교함수, NULL);
 		
 
 		sema_up (&list_entry (list_pop_front (&cond->waiters),
