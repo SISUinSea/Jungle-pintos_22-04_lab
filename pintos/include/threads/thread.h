@@ -99,6 +99,7 @@ struct thread {
 	int64_t wakeup_tick;				/* Record when this thread to wake up. (언제 깨워야 하는지 기록하는 변수) */
 
 	/* Shared between thread.c and synch.c. */
+	struct list_elem all_elem;          /* All List element. */
 	struct list_elem elem;              /* List element. */
 	struct list_elem sleep_elem;		/* Sleep List element. */
 	//recent_cpu, nice 선언
