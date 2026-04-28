@@ -131,25 +131,21 @@ thread_init (void) {
 
 	/* Init the globla thread context */
 	lock_init (&tid_lock);
-	if (!thread_mlfqs)
-	{
-		list_init (&ready_list);
-	}
+	list_init (&ready_list);
 	list_init (&all_list);
 	list_init (&sleep_list);
 	list_init (&destruction_req);
 	
 
-	if (thread_mlfqs)
+
+	//mlfq 초기화
+	for (int i=0 ; i <= PRI_MAX ; i++)
 	{
-		//mlfq 초기화
-		for (int i=0 ; i <= PRI_MAX ; i++)
-		{
-			list_init(&mlfq[i]);
-		}
-		//스레드 개수와 load_avg의 값을 0으로 초기화
-		ready_threads = load_avg = 0;
+		list_init(&mlfq[i]);
 	}
+	//스레드 개수와 load_avg의 값을 0으로 초기화
+	ready_threads = load_avg = 0;
+
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
@@ -198,13 +194,13 @@ thread_tick (void) {
 	if (++thread_ticks >= TIME_SLICE)
 	{
 		intr_yield_on_return ();
-		if(thread_mlfqs)
-		{
-			enum intr_level old_level;
-			old_level = intr_disable ();
-			priority_all_update(mlfq);
-			intr_set_level (old_level);
-		}
+	}
+	if(thread_mlfqs && thread_ticks % TIME_SLICE == 0)
+	{
+		enum intr_level old_level;
+		old_level = intr_disable ();
+		priority_all_update(mlfq);
+		intr_set_level (old_level);
 	}
 }
 
@@ -363,7 +359,10 @@ thread_exit (void) {
 	/* Just set our status to dying and schedule another process.
 	   We will be destroyed during the call to schedule_tail(). */
 	intr_disable ();
-	list_remove(&(thread_current ()->all_elem));
+	struct thread* cur = thread_current ();
+	ASSERT (cur->all_elem.prev != NULL);
+	ASSERT (cur->all_elem.next != NULL);
+	list_remove(&(cur->all_elem));
 	do_schedule (THREAD_DYING);
 	NOT_REACHED ();
 }
@@ -546,8 +545,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
 	
-	if (thread_mlfqs)
-	{
+
 	//스레드의 기본 nice=0, recent_cpu=0;
 	t->nice = t->recent_cpu = 0;
 
@@ -556,10 +554,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	list_push_back(&all_list, &(t->all_elem));
 
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
-	
-	
 
-	}
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -573,7 +568,7 @@ next_thread_to_run (void) {
 	{
 		struct list *high_list = high_Q(mlfq);
 		if (list_empty (high_list))
-		return idle_thread;
+			return idle_thread;
 	else
 		return list_entry (list_pop_front (high_list), struct thread, elem);
 	}
@@ -863,8 +858,10 @@ mlfqs_update_all_per_sec(void) {
 	
 	ready_threads = 0;
 	struct thread* t;
+	struct list_elem *a;
 
-	for (t = list_begin(&all_list); t != list_end(&all_list); t = list_next(t)) {
+	for (a = list_begin (&all_list); a != list_end (&all_list); a = list_next (a)) {
+		t = list_entry (a, struct thread, all_elem);
 		if (t == idle_thread) {
 			continue;
 		}
@@ -884,9 +881,10 @@ mlfqs_update_all_per_sec(void) {
 	
 	fixed_t coefficient = fixed_divide(fixed_multiply(fixed_convert(2), load_avg), (fixed_multiply(fixed_convert(2), load_avg) + fixed_convert(1)));
 	
-	for (t = list_begin(&all_list); t != list_end(&all_list); t = list_next(t)) {
+	for (a = list_begin (&all_list); a != list_end (&all_list); a = list_next (a)) {
+		t = list_entry (a, struct thread, all_elem);
 		if (t != idle_thread) {
-			t->recent_cpu = fixed_multiply(coefficient, t->recent_cpu) + fixed_convert(t->nice);	
+			t->recent_cpu = fixed_multiply (coefficient, t->recent_cpu) + fixed_convert (t->nice);	
 		}
 	}
 	intr_set_level (old_level);
