@@ -32,8 +32,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
-static bool priority_more_func(const struct list_elem* a ,const struct list_elem* b,void* aux)
-{
+static bool priority_more_func (const struct list_elem* a ,const struct list_elem* b,void* aux) {
 	struct thread* thread_a = list_entry(a,struct thread,elem);
 	struct thread* thread_b = list_entry(b,struct thread,elem);
 
@@ -74,7 +73,8 @@ sema_down (struct semaphore *sema) {
 
 	old_level = intr_disable ();
 	while (sema->value == 0) {
-		list_insert_ordered(&(sema->waiters), &thread_current()->elem, priority_more_func, NULL);
+		list_push_back (&sema->waiters, &thread_current ()->elem);
+		list_insert_ordered (&(sema->waiters), &thread_current()->elem, priority_more_func, NULL);
 		thread_block ();
 	}
 	sema->value--;
@@ -252,9 +252,7 @@ struct semaphore_elem {
 	struct semaphore semaphore;         /* This semaphore. */
 };
 
-static bool priority_more_semaphore_elem_func(const struct list_elem* semaphore_elem_elem_a,const struct list_elem* semaphore_elem_elem_b,void* aux)
-{
-	
+static bool priority_more_semaphore_elem_func (const struct list_elem* semaphore_elem_elem_a,const struct list_elem* semaphore_elem_elem_b,void* aux) {
 	struct semaphore_elem* semaphore_elem_a = list_entry(semaphore_elem_elem_a, struct semaphore_elem, elem);
 	struct semaphore_elem* semaphore_elem_b = list_entry(semaphore_elem_elem_b, struct semaphore_elem, elem);
 
@@ -265,7 +263,6 @@ static bool priority_more_semaphore_elem_func(const struct list_elem* semaphore_
 	struct thread* thread_b = list_entry(thread_elem_b, struct thread, elem);
 
 	return thread_a->priority > thread_b->priority;
-
 }
 
 /* Initializes condition variable COND.  A condition variable
@@ -309,7 +306,7 @@ cond_wait (struct condition *cond, struct lock *lock) {
 
 	sema_init (&waiter.semaphore, 0);
 	list_push_back (&cond->waiters, &waiter.elem);
-	// list_insert_ordered(&cond->waiters, &waiter.elem, priority_more_semaphore_elem_func, NULL); // list_insert_ordered(&리스트, &넣을_구조체->elem, 비교함수, NULL);
+	// list_insert_ordered (&cond->waiters, &waiter.elem, priority_more_semaphore_elem_func, NULL); // list_insert_ordered(&리스트, &넣을_구조체->elem, 비교함수, NULL);
 	lock_release (lock);
 	sema_down (&waiter.semaphore);
 	lock_acquire (lock);
