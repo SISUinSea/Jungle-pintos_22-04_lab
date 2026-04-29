@@ -40,6 +40,9 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
+    if (lock->holder != NULL) {
+        donate_to_lock_holder(lock);
+    }
 	sema_down (&lock->semaphore);
 	lock->holder = thread_current ();
 }
@@ -52,9 +55,6 @@ sema_down (struct semaphore *sema) {
 	ASSERT (!intr_context ());
 
 	old_level = intr_disable ();
-    if (sema->value == 0) {
-        donate_to_lock_holder(lock);
-    }
 	while (sema->value == 0) {
 	    리스트에 순서 맞춰서 넣기 (&sema->waiters, &thread_current ()->wait_elem);
 		thread_block ();
