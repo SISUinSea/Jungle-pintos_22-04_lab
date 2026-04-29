@@ -551,6 +551,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	strlcpy (t->name, name, sizeof t->name);
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
+	t->base_priority = priority;
 	t->magic = THREAD_MAGIC;
 	
 
@@ -563,6 +564,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
 
+	list_init (&t->donators);
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
