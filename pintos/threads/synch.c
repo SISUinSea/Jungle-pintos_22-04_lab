@@ -203,8 +203,8 @@ lock_init (struct lock *lock) {
 void
 recalculate_priority (struct lock *lock) {
 	struct thread* t;
-	if (lock == NULL || lock->holder == NULL)
-    	return;
+	// if (lock == NULL || lock->holder == NULL)
+    // 	return;
 	t = lock->holder;
 	
 	int max_donated_priority = 0;
@@ -228,6 +228,7 @@ remove_donate (struct lock *lock) { // lock->holder의 (donator_list를 비우�
 		if (donator_elem == list_end(&t->donators)) break;
 		struct thread* donator = list_entry (donator_elem, struct thread, donator_elem);
         if (donator->waiting_lock == lock) {
+			donator->waiting_lock = NULL;
 			list_remove (&donator->donator_elem);
 		}
 		donator_elem = donator_elem->next;
