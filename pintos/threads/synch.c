@@ -235,7 +235,7 @@ donate_to_lock_holder (struct lock *lock) {
     struct thread* cur = thread_current ();
     cur->waiting_lock = lock;
 
-    list_insert_ordered (&lock->holder->donators, &cur->donator_elem, priority_more_func, NULL);
+    list_insert_ordered (&lock->holder->donators, &cur->donator_elem, donate_priority_more_func, NULL);
 
 	/* DEBUG: print lock holder and all donators */
 
