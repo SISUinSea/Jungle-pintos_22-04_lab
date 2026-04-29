@@ -32,6 +32,8 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+void recalculate_priority (struct lock *lock);
+
 static bool priority_more_func (const struct list_elem* a ,const struct list_elem* b,void* aux) {
 	struct thread* thread_a = list_entry(a,struct thread,elem);
 	struct thread* thread_b = list_entry(b,struct thread,elem);
@@ -160,7 +162,7 @@ sema_test_helper (void *sema_) {
 		sema_up (&sema[1]);
 	}
 }
-
+
 /* Initializes LOCK.  A lock can be held by at most a single
    thread at any given time.  Our locks are not "recursive", that
    is, it is an error for the thread currently holding a lock to
@@ -182,6 +184,23 @@ lock_init (struct lock *lock) {
 
 	lock->holder = NULL;
 	sema_init (&lock->semaphore, 1);
+}
+
+void
+recalculate_priority (struct lock *lock) {
+	struct thread* t;
+	t = lock->holder;
+	
+	int max_donated_priority = -1;
+    if (!list_empty(&t->donators)) {
+		max_donated_priority = list_front(&t->donators);
+	}
+
+    int old_p = t->priority;
+	t->priority = t->base_priority < max_donated_priority ? max_donated_priority : t->base_priority;
+    if ((old_p != t->priority) && (t->waiting_lock != NULL)) {
+		recalculate_priority (t->waiting_lock);
+	}        
 }
 
 /* Acquires LOCK, sleeping until it becomes available if
@@ -347,3 +366,4 @@ cond_broadcast (struct condition *cond, struct lock *lock) {
 	while (!list_empty (&cond->waiters))
 		cond_signal (cond, lock);
 }
+

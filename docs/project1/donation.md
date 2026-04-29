@@ -83,7 +83,7 @@ newFunction recalculate_priority (lock * lock) {
     temp_p = t->priority
     t->priority = max (base_priority, max_donated_prirority)
     if (temp_p != t->priority) and (t->waiting_lock != NULL):
-        recalculate_priorityriority (t->waiting_lock)
+        recalculate_priority (t->waiting_lock)
 
     
     // if max_donated_priority == -1:
