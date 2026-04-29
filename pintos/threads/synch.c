@@ -203,6 +203,16 @@ recalculate_priority (struct lock *lock) {
 	}        
 }
 
+void 
+donate_to_lock_holder (struct lock *lock) {
+    struct thread* cur = thread_current ();
+    cur->waiting_lock = lock;
+
+    list_insert_ordered (&lock->holder->donators, &cur->donator_elem, priority_more_func, NULL);
+
+    recalculate_priority (lock);
+}
+
 /* Acquires LOCK, sleeping until it becomes available if
    necessary.  The lock must not already be held by the current
    thread.
@@ -217,6 +227,9 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
+	if (lock->holder != NULL) {
+		donate_to_lock_holder (lock);
+	}
 	sema_down (&lock->semaphore);
 	lock->holder = thread_current ();
 }
