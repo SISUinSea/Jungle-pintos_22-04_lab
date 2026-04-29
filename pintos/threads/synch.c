@@ -203,7 +203,8 @@ recalculate_priority (struct lock *lock) {
 	}        
 }
 
-void remove_donate (struct lock *lock) { // lock->holder의 (donator_list를 비우고) priority를 재계산
+void
+remove_donate (struct lock *lock) { // lock->holder의 (donator_list를 비우고) priority를 재계산
 	struct thread* t = lock->holder;
 	struct list_elem* donator_elem = list_begin (&t->donators);
     while(!list_empty (&t->donators)) {
@@ -214,7 +215,15 @@ void remove_donate (struct lock *lock) { // lock->holder의 (donator_list를 비
 		}
 		donator_elem = donator_elem->next;
 	}
-    
+}  
+
+void 
+donate_to_lock_holder (struct lock *lock) {
+    struct thread* cur = thread_current ();
+    cur->waiting_lock = lock;
+
+    list_insert_ordered (&lock->holder->donators, &cur->donator_elem, priority_more_func, NULL);
+
     recalculate_priority (lock);
 }
 
@@ -232,6 +241,9 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
+	if (lock->holder != NULL) {
+		donate_to_lock_holder (lock);
+	}
 	sema_down (&lock->semaphore);
 	lock->holder = thread_current ();
 }
