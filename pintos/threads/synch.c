@@ -227,7 +227,7 @@ remove_donate (struct lock *lock) { // lock->holder의 (donator_list를 비우�
 		}
 		donator_elem = donator_elem->next;
 	}
-	t->priority = t->base_priority;
+	recalculate_priority (lock);
 }  
 
 void 
@@ -239,33 +239,33 @@ donate_to_lock_holder (struct lock *lock) {
 
 	/* DEBUG: print lock holder and all donators */
 
-    printf ("\n[DONATE DEBUG]\n");
+    // printf ("\n[DONATE DEBUG]\n");
 
-    printf ("holder: name=%s tid=%d priority=%d base_priority=%d\n",
-            lock->holder->name,
-            lock->holder->tid,
-            lock->holder->priority,
-            lock->holder->base_priority);
-    printf ("donators:\n");
-    struct list_elem *e;
-    int idx = 0;
+    // printf ("holder: name=%s tid=%d priority=%d base_priority=%d\n",
+    //         lock->holder->name,
+    //         lock->holder->tid,
+    //         lock->holder->priority,
+    //         lock->holder->base_priority);
+    // printf ("donators:\n");
+    // struct list_elem *e;
+    // int idx = 0;
 
-    for (e = list_begin (&lock->holder->donators);
-         e != list_end (&lock->holder->donators);
-         e = list_next (e)) {
-        struct thread *donator = list_entry (e, struct thread, donator_elem);
+    // for (e = list_begin (&lock->holder->donators);
+    //      e != list_end (&lock->holder->donators);
+    //      e = list_next (e)) {
+    //     struct thread *donator = list_entry (e, struct thread, donator_elem);
 
-        printf ("  [%d] name=%s tid=%d priority=%d base_priority=%d waiting_lock=%p\n",
-                idx,
-                donator->name,
-                donator->tid,
-                donator->priority,
-                donator->base_priority,
-                donator->waiting_lock);
-        idx++;
-    }
+    //     printf ("  [%d] name=%s tid=%d priority=%d base_priority=%d waiting_lock=%p\n",
+    //             idx,
+    //             donator->name,
+    //             donator->tid,
+    //             donator->priority,
+    //             donator->base_priority,
+    //             donator->waiting_lock);
+    //     idx++;
+    // }
 
-    printf ("[/DONATE DEBUG]\n\n");
+    // printf ("[/DONATE DEBUG]\n\n");
     recalculate_priority (lock);
 }
 
