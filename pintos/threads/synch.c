@@ -138,7 +138,7 @@ sema_up (struct semaphore *sema) {
 	sema->value++;
 	intr_set_level (old_level);
 	if(t->priority > thread_current()->priority){
-	thread_yield();
+		thread_yield();
 	}
 }
 
@@ -203,6 +203,8 @@ lock_init (struct lock *lock) {
 void
 recalculate_priority (struct lock *lock) {
 	struct thread* t;
+	if (lock == NULL || lock->holder == NULL)
+    	return;
 	t = lock->holder;
 	
 	int max_donated_priority = 0;
