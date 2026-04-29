@@ -193,7 +193,8 @@ recalculate_priority (struct lock *lock) {
 	
 	int max_donated_priority = 0;
     if (!list_empty(&t->donators)) {
-		max_donated_priority = list_front(&t->donators);
+		list_sort(&t->donators, priority_more_func, NULL);
+		max_donated_priority = list_entry(list_front(&t->donators), struct thread, donator_elem)->priority;
 	}
 
     int old_p = t->priority;
