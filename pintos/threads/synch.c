@@ -203,6 +203,20 @@ recalculate_priority (struct lock *lock) {
 	}        
 }
 
+void
+remove_donate (struct lock *lock) { // lock->holder의 (donator_list를 비우고) priority를 재계산
+	struct thread* t = lock->holder;
+	struct list_elem* donator_elem = list_begin (&t->donators);
+    while(!list_empty (&t->donators)) {
+		if (donator_elem == list_end(&t->donators)) break;
+		struct thread* donator = list_entry (donator_elem, struct thread, donator_elem);
+        if (donator->waiting_lock == lock) {
+			list_remove (&donator->donator_elem);
+		}
+		donator_elem = donator_elem->next;
+	}
+}  
+
 void 
 donate_to_lock_holder (struct lock *lock) {
     struct thread* cur = thread_current ();
@@ -264,6 +278,7 @@ lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 
+	remove_donate (lock);
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
 }
@@ -277,7 +292,7 @@ lock_held_by_current_thread (const struct lock *lock) {
 
 	return lock->holder == thread_current ();
 }
-
+
 /* One semaphore in a list. */
 struct semaphore_elem {
 	struct list_elem elem;              /* List element. */
