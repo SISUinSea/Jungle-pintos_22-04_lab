@@ -191,7 +191,7 @@ recalculate_priority (struct lock *lock) {
 	struct thread* t;
 	t = lock->holder;
 	
-	int max_donated_priority = -1;
+	int max_donated_priority = 0;
     if (!list_empty(&t->donators)) {
 		max_donated_priority = list_front(&t->donators);
 	}
