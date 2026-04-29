@@ -227,6 +227,7 @@ remove_donate (struct lock *lock) { // lock->holder의 (donator_list를 비우�
 		}
 		donator_elem = donator_elem->next;
 	}
+	t->priority = t->base_priority;
 }  
 
 void 
