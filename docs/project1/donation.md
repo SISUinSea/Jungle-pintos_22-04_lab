@@ -40,7 +40,7 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
-    donation_to_lock_holder(lock);
+    donate_to_lock_holder(lock);
 	sema_down (&lock->semaphore);
 	lock->holder = thread_current ();
 }
@@ -62,7 +62,7 @@ sema_down (struct semaphore *sema) {
 }
 
  
-newFunction donation_to_lock_holder (struct lock *lock) {
+newFunction donate_to_lock_holder (struct lock *lock) {
     cur = thread_current ();
     cur ->waiting_lock = lock;
 
