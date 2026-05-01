@@ -44,12 +44,17 @@ syscall_handler (struct intr_frame *f UNUSED) {
 
 	switch (syscall_num)
 	{
-		case 10:
+		case SYS_WRITE:
+		{
+			int fd = (int) f->R.rdi;
 			char *buf = (char*) f->R.rsi;
 			int size = (int) f->R.rdx;
-			putbuf(buf, size);
+
+			if (fd == STDOUT_FILENO) {
+				putbuf(buf, size);	
+			}
 			break;
-		
+		}
 		default:
 			break;
 	}
