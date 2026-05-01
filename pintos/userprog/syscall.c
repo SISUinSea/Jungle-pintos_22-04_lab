@@ -40,10 +40,18 @@ syscall_init (void) {
 /* The main system call interface */
 void
 syscall_handler (struct intr_frame *f UNUSED) {
-	printf("syscall_num: %d, expected value is 10\n", f->R.rax);
-	printf("fd: %d, expected value is 1\n", f->R.rdi);
-	printf("buf: %s, expected value is ??\n", f->R.rsi);
-	printf("size: %d, expected value is 6\n", f->R.rdx);
+	int syscall_num = f->R.rax;
 
+	switch (syscall_num)
+	{
+		case 10:
+			char *buf = (char*) f->R.rsi;
+			int size = (int) f->R.rdx;
+			putbuf(buf, size);
+			break;
+		
+		default:
+			break;
+	}
 	thread_exit ();
 }
