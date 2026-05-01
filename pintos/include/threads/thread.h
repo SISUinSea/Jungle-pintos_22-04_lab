@@ -107,6 +107,13 @@ struct thread {
 	int nice;
 
 
+	/* Variables for donation */
+	int base_priority;
+	struct list donators; // TODO. 좋은 이름을 고민해보자.
+	struct lock* waiting_lock;
+	struct list_elem donator_elem;
+
+
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
