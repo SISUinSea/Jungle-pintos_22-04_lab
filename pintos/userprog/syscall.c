@@ -40,7 +40,6 @@ syscall_init (void) {
 /* The main system call interface */
 void
 syscall_handler (struct intr_frame *f UNUSED) {
-	// TODO: Your implementation goes here.
-	printf ("system call!\n");
+	printf("syscall_num: %d, expected value is 10\n", f->R.rax);
 	thread_exit ();
 }
