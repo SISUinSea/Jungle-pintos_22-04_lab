@@ -21,6 +21,7 @@
    WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
    PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS IS"
+  
    BASIS, AND THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATION TO
    PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
    MODIFICATIONS.
@@ -128,15 +129,17 @@ sema_up (struct semaphore *sema) {
 	enum intr_level old_level;
 
 	ASSERT (sema != NULL);
-	struct thread* t=NULL;
+	struct thread* t;
+	t = NULL;
 	old_level = intr_disable ();
 	if (!list_empty (&sema->waiters)){
 		list_sort (&(sema->waiters), priority_more_func, NULL);
-		thread_unblock (list_entry (list_pop_front (&sema->waiters), struct thread, elem));
+		t=list_entry (list_pop_front (&sema->waiters), struct thread, elem);
+		thread_unblock (t);
 	}
 	sema->value++;
 	intr_set_level (old_level);
-	if(t!=NULL&&t->priority > thread_current()->priority){
+	if (t != NULL && t->priority > thread_current()->priority) {
 		thread_yield();
 	}
 }
@@ -202,6 +205,8 @@ lock_init (struct lock *lock) {
 void
 recalculate_priority (struct lock *lock) {
 	struct thread* t;
+	// if (lock == NULL || lock->holder == NULL)
+    // 	return;
 	t = lock->holder;
 	
 	int max_donated_priority = 0;
@@ -225,10 +230,12 @@ remove_donate (struct lock *lock) { // lock->holder의 (donator_list를 비우�
 		if (donator_elem == list_end(&t->donators)) break;
 		struct thread* donator = list_entry (donator_elem, struct thread, donator_elem);
         if (donator->waiting_lock == lock) {
+			donator->waiting_lock = NULL;
 			list_remove (&donator->donator_elem);
 		}
 		donator_elem = donator_elem->next;
 	}
+	recalculate_priority (lock);
 }  
 
 void 
@@ -236,8 +243,37 @@ donate_to_lock_holder (struct lock *lock) {
     struct thread* cur = thread_current ();
     cur->waiting_lock = lock;
 
-    list_insert_ordered (&lock->holder->donators, &cur->donator_elem, priority_more_func, NULL);
+    list_insert_ordered (&lock->holder->donators, &cur->donator_elem, donate_priority_more_func, NULL);
 
+	/* DEBUG: print lock holder and all donators */
+
+    // printf ("\n[DONATE DEBUG]\n");
+
+    // printf ("holder: name=%s tid=%d priority=%d base_priority=%d\n",
+    //         lock->holder->name,
+    //         lock->holder->tid,
+    //         lock->holder->priority,
+    //         lock->holder->base_priority);
+    // printf ("donators:\n");
+    // struct list_elem *e;
+    // int idx = 0;
+
+    // for (e = list_begin (&lock->holder->donators);
+    //      e != list_end (&lock->holder->donators);
+    //      e = list_next (e)) {
+    //     struct thread *donator = list_entry (e, struct thread, donator_elem);
+
+    //     printf ("  [%d] name=%s tid=%d priority=%d base_priority=%d waiting_lock=%p\n",
+    //             idx,
+    //             donator->name,
+    //             donator->tid,
+    //             donator->priority,
+    //             donator->base_priority,
+    //             donator->waiting_lock);
+    //     idx++;
+    // }
+
+    // printf ("[/DONATE DEBUG]\n\n");
     recalculate_priority (lock);
 }
 

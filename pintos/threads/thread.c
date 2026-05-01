@@ -407,10 +407,14 @@ thread_set_priority (int new_priority) {
 	{
 		return ;
 	}
-
-	thread_current ()->priority = new_priority;
-	
-	if(!list_empty(&ready_list))
+	struct thread* t= thread_current ();
+	t->base_priority = new_priority;
+	if (!list_empty (&t->donators))
+    	t->priority = (new_priority>t->priority)?new_priority:t->priority;
+	else
+		t->priority = new_priority;
+	struct thread* thread_temp = list_entry(list_begin(&ready_list),struct thread,elem);
+	if (thread_temp->priority > new_priority)
 	{
 		struct thread* thread_begin = list_entry (list_begin(&ready_list), struct thread, elem);
 		if(thread_begin->priority > new_priority)
@@ -557,13 +561,11 @@ init_thread (struct thread *t, const char *name, int priority) {
 
 	//스레드의 기본 nice=0, recent_cpu=0;
 	t->nice = t->recent_cpu = 0;
-
 	enum intr_level old_level = intr_disable ();	/* interrupt 방해금지모드 설정 */
-
 	list_push_back(&all_list, &(t->all_elem));
-
 	intr_set_level (old_level);						/* interrupt 방해금지모드 해제 */
 
+	t->waiting_lock = NULL;
 	list_init (&t->donators);
 }
 
