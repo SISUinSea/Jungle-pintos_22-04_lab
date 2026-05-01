@@ -21,6 +21,7 @@
    WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
    PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS IS"
+  
    BASIS, AND THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATION TO
    PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
    MODIFICATIONS.
@@ -129,6 +130,7 @@ sema_up (struct semaphore *sema) {
 
 	ASSERT (sema != NULL);
 	struct thread* t;
+	t = NULL;
 	old_level = intr_disable ();
 	if (!list_empty (&sema->waiters)){
 		list_sort (&(sema->waiters), priority_more_func, NULL);
@@ -137,7 +139,7 @@ sema_up (struct semaphore *sema) {
 	}
 	sema->value++;
 	intr_set_level (old_level);
-	if(t->priority > thread_current()->priority){
+	if (t != NULL && t->priority > thread_current()->priority) {
 		thread_yield();
 	}
 }
