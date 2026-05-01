@@ -1,8 +1,8 @@
 {
   "threads": {
     "tests/threads/alarm-single": {
-      "count": 6,
-      "last_used": 1777469113.267,
+      "count": 7,
+      "last_used": 1777470208.802,
       "last_action": "run"
     },
     "tests/threads/alarm-multiple": {
@@ -41,8 +41,8 @@
       "last_action": "run"
     },
     "tests/threads/priority-donate-multiple": {
-      "count": 13,
-      "last_used": 1777469113.267,
+      "count": 15,
+      "last_used": 1777522772.253,
       "last_action": "run"
     },
     "tests/threads/priority-donate-multiple2": {
@@ -81,8 +81,8 @@
       "last_action": "run"
     },
     "tests/threads/priority-condvar": {
-      "count": 9,
-      "last_used": 1777469113.267,
+      "count": 10,
+      "last_used": 1777470226.617,
       "last_action": "run"
     },
     "tests/threads/priority-donate-chain": {
@@ -91,48 +91,48 @@
       "last_action": "run"
     },
     "tests/threads/mlfqs/mlfqs-load-1": {
-      "count": 3,
-      "last_used": 1777466534.488,
+      "count": 7,
+      "last_used": 1777470530.969,
       "last_action": "run"
     },
     "tests/threads/mlfqs/mlfqs-load-60": {
-      "count": 3,
-      "last_used": 1777466534.488,
+      "count": 4,
+      "last_used": 1777470592.388,
       "last_action": "run"
     },
     "tests/threads/mlfqs/mlfqs-load-avg": {
-      "count": 3,
-      "last_used": 1777466534.488,
+      "count": 4,
+      "last_used": 1777470592.388,
       "last_action": "run"
     },
     "tests/threads/mlfqs/mlfqs-recent-1": {
-      "count": 3,
-      "last_used": 1777466534.488,
+      "count": 4,
+      "last_used": 1777470592.388,
       "last_action": "run"
     },
     "tests/threads/mlfqs/mlfqs-fair-2": {
-      "count": 3,
-      "last_used": 1777466534.488,
+      "count": 4,
+      "last_used": 1777470592.388,
       "last_action": "run"
     },
     "tests/threads/mlfqs/mlfqs-fair-20": {
-      "count": 3,
-      "last_used": 1777466534.488,
+      "count": 4,
+      "last_used": 1777470592.388,
       "last_action": "run"
     },
     "tests/threads/mlfqs/mlfqs-nice-2": {
-      "count": 2,
-      "last_used": 1777466534.488,
+      "count": 3,
+      "last_used": 1777470592.388,
       "last_action": "run"
     },
     "tests/threads/mlfqs/mlfqs-nice-10": {
-      "count": 2,
-      "last_used": 1777466534.488,
+      "count": 3,
+      "last_used": 1777470592.388,
       "last_action": "run"
     },
     "tests/threads/mlfqs/mlfqs-block": {
-      "count": 2,
-      "last_used": 1777466534.488,
+      "count": 3,
+      "last_used": 1777470592.388,
       "last_action": "run"
     }
   }
