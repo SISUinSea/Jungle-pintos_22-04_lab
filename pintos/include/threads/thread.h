@@ -94,8 +94,15 @@ struct thread {
 	int64_t wakeup_tick;				/* Record when this thread to wake up. (언제 깨워야 하는지 기록하는 변수) */
 
 	/* Shared between thread.c and synch.c. */
-	struct list_elem elem;              /* List element. */
+	struct list_elem elem;              /* List element. 세마포의 Waiter list element로 쓰인다. */
 	struct list_elem sleep_elem;		/* Sleep List element. */
+
+	/* Variables for donation */
+	int base_priority;
+	struct list donators; // TODO. 좋은 이름을 고민해보자.
+	struct lock* waiting_lock;
+	struct list_elem donator_elem;
+
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
