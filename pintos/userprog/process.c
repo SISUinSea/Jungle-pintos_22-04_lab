@@ -50,9 +50,9 @@ process_create_initd (const char *file_name) {
 		return TID_ERROR;
 	strlcpy (fn_copy, file_name, PGSIZE);
 
-	char process_name[16] = {0, };
+	char process_name[16] = { 0 };
 	char *save_ptr;
-	strlcpy(process_name, file_name, sizeof(file_name));
+	strlcpy(process_name, file_name, sizeof process_name);
 	strtok_r(process_name, " ", &save_ptr);
 	
 
