@@ -50,8 +50,14 @@ process_create_initd (const char *file_name) {
 		return TID_ERROR;
 	strlcpy (fn_copy, file_name, PGSIZE);
 
+	// 제일 처음 ' ' 이게 나오는 인덱스 위치를 찾고
+	char* ptr = strchr(file_name, ' ');
+	// 처음부터 거기까지만 deep copy로 process name을 따로 가져감
+	char process_name[16] = {0, };
+	strlcpy(process_name, file_name, ptr - file_name + 1);
+
 	/* Create a new thread to execute FILE_NAME. */
-	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
+	tid = thread_create (process_name, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
 		palloc_free_page (fn_copy);
 	return tid;
@@ -198,6 +204,8 @@ process_exec (void *f_name) {
 		{
 			argv_tokens[arg_count++] = arg;
 			arg = strtok_r (NULL, " ", &next_ptr);
+			// printf("at userprog... %s=================\n", arg);
+
 		}
 
 		for(int j = arg_count-1 ; j >= 0; j--)

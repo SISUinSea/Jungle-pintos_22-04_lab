@@ -57,7 +57,9 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		}
 		case SYS_EXIT:
 		{
-			int status = (int) f->R.rdi;
+			char *name = thread_current ()->name;
+			int status_code = (int) f->R.rdi;
+			printf("%s: exit(%d)\n", name, status_code);
 			thread_exit ();
 			break;
 		}
