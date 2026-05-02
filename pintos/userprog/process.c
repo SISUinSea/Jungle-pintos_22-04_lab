@@ -163,7 +163,7 @@ error:
 int
 process_exec (void *f_name) {
 
-    if ( f_name == NULL)
+    if (f_name == NULL)
 		return -1;
     
 	char *cmd_page = f_name;
@@ -172,18 +172,18 @@ process_exec (void *f_name) {
 	bool success;
 
 	/* We cannot use the intr_frame in the thread structure.
-		* This is because when current thread rescheduled,
-		* it stores the execution information to the member. */
+	* This is because when current thread rescheduled,
+	* it stores the execution information to the member. */
 	struct intr_frame _if;
 	_if.ds = _if.es = _if.ss = SEL_UDSEG;
 	_if.cs = SEL_UCSEG;
 	_if.eflags = FLAG_IF | FLAG_MBS;
 
-	int arg_count=0;
-	char *temp_arg[32]={ 0 };
-	uint64_t addr_arg[32]={ 0 };
+	int arg_count = 0;
+	char *argv_tokens[32] = { 0 };
+	uint64_t arg_addrs[32] = { 0 };
 	char *next_ptr;
-	int i=0;
+	int i = 0;
 
 	arg = strtok_r(f_name, " ", &next_ptr);
 
@@ -194,37 +194,37 @@ process_exec (void *f_name) {
 	success = load (arg, &_if);
 	if (success)
 	{
-		while(arg!=NULL && arg_count < 128)
+		while(arg != NULL && arg_count < 32)
 		{
-			temp_arg[arg_count++] = arg;
-			arg= strtok_r(NULL, " ", &next_ptr);
+			argv_tokens[arg_count++] = arg;
+			arg = strtok_r (NULL, " ", &next_ptr);
 		}
 
 		for(int j = arg_count-1 ; j >= 0; j--)
 		{
-			i=strlen(temp_arg[j])+1;
-			_if.rsp-=i;
-			addr_arg[j]= _if.rsp;
-			memcpy((void*)_if.rsp,temp_arg[j],i);
+			i = strlen(argv_tokens[j]) + 1;
+			_if.rsp -= i;
+			arg_addrs[j] = _if.rsp;
+			memcpy ((void*)_if.rsp, argv_tokens[j], i);
 		}
 
 		int j = _if.rsp % 8;
 		_if.rsp -= j;
-		memset((void *) _if.rsp, 0, j);
+		memset ((void *) _if.rsp, 0, j);
 		_if.rsp -= 8;
-		memset((void *) _if.rsp, 0, 8);
+		memset ((void *) _if.rsp, 0, 8);
 
 		for(int j = arg_count-1 ; j >= 0; j--)
 		{
 			_if.rsp -= 8;
-			memcpy((void *) _if.rsp, &addr_arg[j], 8);
+			memcpy ((void *) _if.rsp, &arg_addrs[j], 8);
 		}
 
-		_if.R.rsi=_if.rsp;
+		_if.R.rsi = _if.rsp;
 		_if.rsp -= 8;
-		memset((void *) _if.rsp, 0, 8);
+		memset ((void *) _if.rsp, 0, 8);
 
-		_if.R.rdi=arg_count;
+		_if.R.rdi = arg_count;
 
 		/* If load failed, quit. */
 		palloc_free_page (cmd_page);
