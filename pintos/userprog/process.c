@@ -194,7 +194,7 @@ process_exec (void *f_name) {
         success = load (arg, &_if);
         if (success)
         {
-            while(arg!=NULL)
+            while(arg!=NULL && arg_count < 128)
             {
                 temp_arg[arg_count++] = arg;
                 arg= strtok_r(NULL, " ", &next_ptr);
