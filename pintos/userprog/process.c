@@ -163,7 +163,8 @@ error:
 int
 process_exec (void *f_name) {
 
-    if ( f_name == NULL) return -1;
+    if ( f_name == NULL)
+		return -1;
     
 	char *cmd_page = f_name;
 	char *arg;
@@ -179,8 +180,8 @@ process_exec (void *f_name) {
 	_if.eflags = FLAG_IF | FLAG_MBS;
 
 	int arg_count=0;
-	char *temp_arg[128]={ 0 };
-	uint64_t addr_arg[128]={ 0 };
+	char *temp_arg[32]={ 0 };
+	uint64_t addr_arg[32]={ 0 };
 	char *next_ptr;
 	int i=0;
 
