@@ -180,8 +180,8 @@ process_exec (void *f_name) {
         _if.eflags = FLAG_IF | FLAG_MBS;
 
         int arg_count=0;
-        char *temp_arg[26]={ 0 };
-        uint64_t addr_arg[26]={ 0 };
+        char *temp_arg[128]={ 0 };
+        uint64_t addr_arg[128]={ 0 };
         char *next_ptr;
         int i=0;
 
