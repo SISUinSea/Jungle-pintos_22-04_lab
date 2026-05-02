@@ -204,8 +204,6 @@ process_exec (void *f_name) {
 		{
 			argv_tokens[arg_count++] = arg;
 			arg = strtok_r (NULL, " ", &next_ptr);
-			// printf("at userprog... %s=================\n", arg);
-
 		}
 
 		for(int j = arg_count-1 ; j >= 0; j--)
