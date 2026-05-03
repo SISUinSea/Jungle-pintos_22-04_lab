@@ -333,10 +333,13 @@ process_exit (void) {
 	struct thread *curr = thread_current ();
 	struct child_status *cs = curr->wait_status;
 
-	printf("%s: exit(%d)\n", curr->name, cs->exit_code);
+	if (cs != NULL) {
+		printf("%s: exit(%d)\n", curr->name, cs->exit_code);
 
-	cs->exited = true;
-	sema_up (&cs->wait_sema);
+		cs->exited = true;
+		sema_up (&cs->wait_sema);
+	}
+	
 
 	process_cleanup ();
 }
