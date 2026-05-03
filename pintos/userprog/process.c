@@ -86,6 +86,7 @@ process_create_initd (const char *file_name) {
 		palloc_free_page (fn_copy);
 		list_remove (&new_cs->elem);
 		free (new_cs);
+		free(ii);
 	} else {
 		new_cs->tid = tid;
 	}
@@ -99,6 +100,7 @@ initd (void* ii) {
 	char *f_name = ((struct initd_info *) ii)->f_name;
 	struct child_status *cs = ((struct initd_info *) ii)->cs;
 	thread_current ()->wait_status = cs;
+	free(ii);
 #ifdef VM
 	supplemental_page_table_init (&thread_current ()->spt);
 #endif
