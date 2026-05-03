@@ -54,12 +54,25 @@ process_create_initd (const char *file_name) {
 	char *save_ptr;
 	strlcpy(process_name, file_name, sizeof process_name);
 	strtok_r(process_name, " ", &save_ptr);
-	
+
+	/* current thread-> children 리스트에 새로 만들 thread를 등록할 준비를 함.*/
+	struct child_status *new_cs = malloc(sizeof(struct child_status));
+	new_cs->tid = NULL;
+	new_cs->waited = false;
+	new_cs->exited = false;
+	new_cs->exit_code = NULL;
 
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (process_name, PRI_DEFAULT, initd, fn_copy);
-	if (tid == TID_ERROR)
+	if (tid == TID_ERROR) {
 		palloc_free_page (fn_copy);
+		free (new_cs);
+	} else {
+		new_cs->tid = tid;
+		sema_init (&new_cs->wait_sema, 0);
+		list_push_back (&thread_current ()->children, &new_cs->elem);
+	}
+		
 	return tid;
 }
 
