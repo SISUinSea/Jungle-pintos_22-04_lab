@@ -306,6 +306,7 @@ process_wait (tid_t child_tid UNUSED) {
 		if (cs->tid == child_tid) {
 			break;
 		}
+		cs = NULL;
 	}
 
 	if (cs != NULL) {
