@@ -333,6 +333,8 @@ process_exit (void) {
 
 	printf("%s: exit(%d)\n", curr->name, cs->exit_code);
 
+	cs->exited = true;
+	sema_up (&cs->wait_sema);
 
 	process_cleanup ();
 }
