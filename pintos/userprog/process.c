@@ -24,7 +24,7 @@
 
 static void process_cleanup (void);
 static bool load (const char *file_name, struct intr_frame *if_);
-static void initd (void *f_name);
+static void initd (void *ii);
 static void __do_fork (void *);
 
 /* General process initializer for initd and other process. */
@@ -72,8 +72,11 @@ process_create_initd (const char *file_name) {
 	sema_init (&new_cs->wait_sema, 0);
 	list_push_back (&thread_current ()->children, &new_cs->elem);
 
-	struct initd_info *ii;
-	ii->cs = &new_cs;
+	struct initd_info *ii = malloc (sizeof (struct initd_info));
+	if (ii == NULL) {
+		return TID_ERROR;
+	}
+	ii->cs = new_cs;
 	ii->f_name = fn_copy;
 
 
@@ -92,9 +95,9 @@ process_create_initd (const char *file_name) {
 
 /* A thread function that launches first user process. */
 static void
-initd (struct initd_info* ii) {
-	char *f_name = ii->f_name;
-	struct child_status *cs = ii->cs;
+initd (void* ii) {
+	char *f_name = ((struct initd_info *) ii)->f_name;
+	struct child_status *cs = ((struct initd_info *) ii)->cs;
 	thread_current ()->wait_status = cs;
 #ifdef VM
 	supplemental_page_table_init (&thread_current ()->spt);
