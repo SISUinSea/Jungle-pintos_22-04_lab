@@ -62,17 +62,23 @@ process_create_initd (const char *file_name) {
 
 	/* current thread-> children 리스트에 새로 만들 thread를 등록할 준비를 함.*/
 	struct child_status *new_cs = malloc(sizeof(struct child_status));
-	if (new_cs != NULL) {
-		new_cs->tid = NULL;
-		new_cs->waited = false;
-		new_cs->exited = false;
-		new_cs->exit_code = NULL;
-		sema_init (&new_cs->wait_sema, 0);
-		list_push_back (&thread_current ()->children, &new_cs->elem);
+	if (new_cs == NULL) {
+		return TID_ERROR;
 	}
+	new_cs->tid = NULL;
+	new_cs->waited = false;
+	new_cs->exited = false;
+	new_cs->exit_code = NULL;
+	sema_init (&new_cs->wait_sema, 0);
+	list_push_back (&thread_current ()->children, &new_cs->elem);
+
+	struct initd_info *ii;
+	ii->cs = &new_cs;
+	ii->f_name = fn_copy;
+
 
 	/* Create a new thread to execute FILE_NAME. */
-	tid = thread_create (process_name, PRI_DEFAULT, initd, fn_copy);
+	tid = thread_create (process_name, PRI_DEFAULT, initd, ii);
 	if (tid == TID_ERROR) {
 		palloc_free_page (fn_copy);
 		list_remove (&new_cs->elem);
