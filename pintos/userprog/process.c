@@ -68,7 +68,7 @@ process_create_initd (const char *file_name) {
 	new_cs->tid = -1;
 	new_cs->waited = false;
 	new_cs->exited = false;
-	new_cs->exit_code = NULL;
+	new_cs->exit_code = -1;
 	sema_init (&new_cs->wait_sema, 0);
 	list_push_back (&thread_current ()->children, &new_cs->elem);
 
