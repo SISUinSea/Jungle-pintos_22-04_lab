@@ -316,8 +316,9 @@ process_wait (tid_t child_tid UNUSED) {
 		/* after wake up... */
 		list_remove (&cs->elem);
 		int exit_code = cs->exit_code;
+		bool exited = cs->exited;
 		free (cs);
-		if (cs->exited == false) {
+		if (exited == false) {
 			return -1;
 		}
 		return exit_code;
