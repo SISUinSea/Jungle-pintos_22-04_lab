@@ -62,10 +62,12 @@ process_create_initd (const char *file_name) {
 
 	/* current thread-> children 리스트에 새로 만들 thread를 등록할 준비를 함.*/
 	struct child_status *new_cs = malloc(sizeof(struct child_status));
-	new_cs->tid = NULL;
-	new_cs->waited = false;
-	new_cs->exited = false;
-	new_cs->exit_code = NULL;
+	if (new_cs != NULL) {
+		new_cs->tid = NULL;
+		new_cs->waited = false;
+		new_cs->exited = false;
+		new_cs->exit_code = NULL;
+	}
 
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (process_name, PRI_DEFAULT, initd, fn_copy);
