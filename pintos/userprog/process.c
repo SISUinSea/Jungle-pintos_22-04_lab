@@ -65,7 +65,7 @@ process_create_initd (const char *file_name) {
 	if (new_cs == NULL) {
 		return TID_ERROR;
 	}
-	new_cs->tid = NULL;
+	new_cs->tid = -1;
 	new_cs->waited = false;
 	new_cs->exited = false;
 	new_cs->exit_code = NULL;
