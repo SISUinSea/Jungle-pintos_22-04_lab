@@ -329,10 +329,10 @@ process_wait (tid_t child_tid UNUSED) {
 void
 process_exit (void) {
 	struct thread *curr = thread_current ();
-	/* TODO: Your code goes here.
-	 * TODO: Implement process termination message (see
-	 * TODO: project2/process_termination.html).
-	 * TODO: We recommend you to implement process resource cleanup here. */
+	struct child_status *cs = curr->wait_status;
+
+	printf("%s: exit(%d)\n", curr->name, cs->exit_code);
+
 
 	process_cleanup ();
 }
