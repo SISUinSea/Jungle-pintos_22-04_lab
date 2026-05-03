@@ -33,6 +33,11 @@ process_init (void) {
 	struct thread *current = thread_current ();
 }
 
+struct initd_info {
+	void * f_name;
+	struct child_status *cs;
+};
+
 /* Starts the first userland program, called "initd", loaded from FILE_NAME.
  * The new thread may be scheduled (and may even exit)
  * before process_create_initd() returns. Returns the initd's
@@ -78,7 +83,10 @@ process_create_initd (const char *file_name) {
 
 /* A thread function that launches first user process. */
 static void
-initd (void *f_name) {
+initd (struct initd_info* ii) {
+	char *f_name = ii->f_name;
+	struct child_status *cs = ii->cs;
+	thread_current ()->wait_status = cs;
 #ifdef VM
 	supplemental_page_table_init (&thread_current ()->spt);
 #endif
