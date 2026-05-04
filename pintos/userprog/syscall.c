@@ -6,6 +6,7 @@
 #include "threads/loader.h"
 #include "userprog/gdt.h"
 #include "threads/flags.h"
+#include "threads/malloc.h"
 #include "intrinsic.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -62,10 +63,33 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		}
 		case SYS_OPEN:
 		{
-			struct fd_entry cur;
+			struct thread *cur = thread_current();
 			char *file_name = (char *) f->R.rdi;
-			cur.file_content = filesys_open(file_name);
-			list_push_back(&thread_current()->file_table, &cur.file_elem);
+			struct file *file = filesys_open(file_name);
+			if (file == NULL) {
+				f->R.rax = -1;
+				break;
+			}
+
+			struct fd_entry *entry = malloc(sizeof *entry);
+			if (entry == NULL) {
+				file_close(file);
+				f->R.rax = -1;
+				break;
+			}
+
+			int max_fd = STDOUT_FILENO;
+			for (struct list_elem *e = list_begin(&cur->fd_table); e != list_end(&cur->fd_table); e = list_next(e)) {
+				struct fd_entry *fd_entry = list_entry(e, struct fd_entry, file_elem);
+				if (fd_entry->fd > max_fd)
+					max_fd = fd_entry->fd;
+			} 
+
+			entry->fd = max_fd + 1;
+			entry->file = file;
+			list_push_back(&cur->fd_table, &entry->file_elem);
+			f->R.rax = entry->fd;
+			break;
 		}
 		case SYS_FILESIZE:
 		{
