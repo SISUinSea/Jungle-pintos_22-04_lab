@@ -74,6 +74,8 @@ process_create_initd (const char *file_name) {
 
 	struct initd_info *ii = malloc (sizeof (struct initd_info));
 	if (ii == NULL) {
+		list_remove (&new_cs->elem);
+		free (new_cs);
 		return TID_ERROR;
 	}
 	ii->cs = new_cs;
