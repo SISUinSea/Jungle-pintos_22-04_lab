@@ -53,6 +53,7 @@ syscall_handler (struct intr_frame *f) {
 
 			if (fd == STDOUT_FILENO) {
 				putbuf(buf, size);	
+				f->R.rax = size;	// write()의 반환값으로 출력한 바이트 수를 돌려준다.
 			}
 			break;
 		}
