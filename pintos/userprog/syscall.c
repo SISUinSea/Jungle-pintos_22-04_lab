@@ -46,10 +46,14 @@ is_valid_ptr(char *buf)
 static bool
 is_valid_buffer(char *buf, int size)
 {
-	if ( !is_user_vaddr(buf) || !is_user_vaddr(buf + size) )
-		return false;
-	if ( pml4_get_page (thread_current ()->pml4, buf ) == NULL )
-		return false;
+	for(int64_t i = pg_round_down (buf) ; i < buf + size - 1 ; i += PGSIZE)
+	{
+		if( !is_user_vaddr(i) || pml4_get_page (thread_current ()->pml4, i ) == NULL)
+		{
+			return false;
+		}
+	}
+
 	return true;
 }
 static bool
