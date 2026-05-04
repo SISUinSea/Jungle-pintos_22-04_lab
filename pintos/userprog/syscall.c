@@ -71,6 +71,8 @@ syscall_handler (struct intr_frame *f) {
 			break;
 		}
 		default:
+		    thread_current()->exit_status = -1;
+			thread_exit(); //알 수 없는 syscall이 들어오면 비정상 종료 상태(-1)를 저장하고 종료한다
 			break;
 	}
 }
