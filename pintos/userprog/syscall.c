@@ -7,6 +7,7 @@
 #include "userprog/gdt.h"
 #include "threads/flags.h"
 #include "intrinsic.h"
+#include "threads/init.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -73,7 +74,7 @@ is_valid_string(char *buf)
 }
 /* The main system call interface */
 void
-syscall_handler (struct intr_frame *f UNUSED) {
+syscall_handler (struct intr_frame *f) {
 	int syscall_num = f->R.rax;
 
 	switch (syscall_num)
@@ -89,8 +90,9 @@ syscall_handler (struct intr_frame *f UNUSED) {
 				return ;
 			}
 
-			if ( fd == STDOUT_FILENO ) {
+			if (fd == STDOUT_FILENO) {
 				putbuf(buf, size);
+				f->R.rax = size;	// write()의 반환값으로 출력한 바이트 수를 돌려준다.
 			}
 			break;
 		}
@@ -170,17 +172,22 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		}
 
 		case SYS_EXIT:
+		{ 
+			#ifdef USERPROG
+			thread_current()->exit_status = (int) f->R.rdi;
+			thread_exit();
+			#endif
+			break;
+		}
+        case SYS_HALT:
 		{
-			char *name = thread_current ()->name;
-			struct child_status *cs = thread_current ()->wait_status;
-			if (cs != NULL) {
-				cs->exit_code = (int) f->R.rdi;
-			}
-
-			thread_exit ();
+			printf("Syetem Halted\n");
+			power_off();
 			break;
 		}
 		default:
-			break;
+		    thread_current()->exit_status = -1;
+			thread_exit(); //알 수 없는 syscall이 들어오면 비정상 종료 상태(-1)를 저장하고 종료한다
+            break;
 	}
 }

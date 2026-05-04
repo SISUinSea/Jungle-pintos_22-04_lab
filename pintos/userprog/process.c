@@ -137,6 +137,7 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
 
 	/* 2. Resolve VA from the parent's page map level 4. */
+	
 	parent_page = pml4_get_page (parent->pml4, va);
 
 	/* 3. TODO: Allocate new PAL_USER page for the child and set result to
@@ -345,6 +346,11 @@ process_exit (void) {
 	}
 	
 
+	if (curr->pml4 != NULL){ //이 프로세스가 user process인 경우에만 종료 메시지를 출력한다.
+	    printf("%s: exit(%d)\n", curr->name, curr->exit_status); //프로그램 이름과 종료 상태를 출력한다.
+
+
+	} 
 	process_cleanup ();
 }
 
