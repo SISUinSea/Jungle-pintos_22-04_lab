@@ -11,6 +11,7 @@
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
 
+
 /* System call.
  *
  * Previously system call services was handled by the interrupt handler
@@ -44,6 +45,26 @@ syscall_handler (struct intr_frame *f UNUSED) {
 
 	switch (syscall_num)
 	{
+		case SYS_EXIT:
+		{
+			char *name = thread_current ()->name;
+			int status_code = (int) f->R.rdi;
+			printf("%s: exit(%d)\n", name, status_code);
+			thread_exit ();
+			break;
+		}
+		case SYS_OPEN:
+		{
+			struct fd_entry;
+		}
+		case SYS_FILESIZE:
+		{
+
+		}
+		case SYS_READ:
+		{
+
+		}
 		case SYS_WRITE:
 		{
 			int fd = (int) f->R.rdi;
@@ -52,15 +73,10 @@ syscall_handler (struct intr_frame *f UNUSED) {
 
 			if (fd == STDOUT_FILENO) {
 				putbuf(buf, size);	
+				f->R.rax = size;
+				break;
 			}
-			break;
-		}
-		case SYS_EXIT:
-		{
-			char *name = thread_current ()->name;
-			int status_code = (int) f->R.rdi;
-			printf("%s: exit(%d)\n", name, status_code);
-			thread_exit ();
+			f->R.rax = -1;
 			break;
 		}
 		default:
