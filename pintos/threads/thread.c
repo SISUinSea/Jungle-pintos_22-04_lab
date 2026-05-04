@@ -439,6 +439,9 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->base_priority = priority;
+	#ifdef USERPROG
+	    t->exit_status = -1; //이 thread의 종료 상태 기본값을 -1로 저장한다
+	#endif
 	t->magic = THREAD_MAGIC;
 	t->waiting_lock = NULL;
 	list_init (&t->donators);
