@@ -44,6 +44,15 @@ is_valid_ptr(char *buf)
 	return true;
 }
 static bool
+is_valid_buffer(char *buf, int size)
+{
+	if ( !is_user_vaddr(buf) || !is_user_vaddr(buf + size) )
+		return false;
+	if ( pml4_get_page (thread_current ()->pml4, buf ) == NULL )
+		return false;
+	return true;
+}
+static bool
 is_valid_string(char *buf)
 {
 	for( int i=0 ; ; i++)
@@ -70,10 +79,29 @@ syscall_handler (struct intr_frame *f UNUSED) {
 			int fd = (int) f->R.rdi;
 			char *buf = (char*) f->R.rsi;
 			int size = (int) f->R.rdx;
+			if( buf == NULL || !is_valid_buffer( buf, size ) )
+			{
+				// TODO: exit(-1))
+				return ;
+			}
 
-			if (fd == STDOUT_FILENO) {
+			if ( fd == STDOUT_FILENO ) {
 				putbuf(buf, size);
 			}
+			break;
+		}
+
+		case SYS_READ:
+		{
+			int fd = (int) f->R.rdi;
+			char *buf = (char*) f->R.rsi;
+			int size = (int) f->R.rdx;
+			if( buf == NULL || !is_valid_buffer( buf, size ) )
+			{
+				// TODO: exit(-1))
+				return ;
+			}
+
 			break;
 		}
 
