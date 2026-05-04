@@ -62,7 +62,10 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		}
 		case SYS_OPEN:
 		{
-			
+			struct fd_entry cur;
+			char *file_name = (char *) f->R.rdi;
+			cur.file_content = filesys_open(file_name);
+			list_push_back(&thread_current()->file_table, &cur.file_elem);
 		}
 		case SYS_FILESIZE:
 		{
