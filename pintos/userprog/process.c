@@ -343,10 +343,11 @@ process_exit (void) {
 		cs->exited = true;
 		sema_up (&cs->wait_sema);
 	}
-
+#ifdef USERPROG
 	if (curr->pml4 != NULL){ //이 프로세스가 user process인 경우에만 종료 메시지를 출력한다.
 	    printf("%s: exit(%d)\n", curr->name, curr->exit_status); //프로그램 이름과 종료 상태를 출력한다.
 	}
+#endif
 	process_cleanup ();
 }
 

@@ -10,6 +10,7 @@
 #include "threads/palloc.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "devices/timer.h"
 #include "intrinsic.h"
 #ifdef USERPROG
 #include "userprog/process.h"
@@ -445,7 +446,9 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->magic = THREAD_MAGIC;
 	t->waiting_lock = NULL;
 	list_init (&t->donators);
+#ifdef USERPROG
 	list_init (&t->children);
+#endif
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -648,7 +651,7 @@ thread_sleep (int64_t ticks) {
 }
 
 void 
-thread_wakeup () {
+thread_wakeup (void) {
 	enum intr_level old_level = intr_disable ();	/* interrupt 방해금지모드 설정 */
 
 	int64_t cur_ticks = timer_ticks ();

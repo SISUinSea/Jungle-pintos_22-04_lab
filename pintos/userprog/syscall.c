@@ -72,6 +72,12 @@ is_valid_string(char *buf)
 	}
 	return true;
 }
+static void
+sys_exit (int status) {
+  struct thread *curr = thread_current ();
+  curr->exit_status = status;
+  thread_exit ();
+}
 /* The main system call interface */
 void
 syscall_handler (struct intr_frame *f) {
@@ -86,8 +92,8 @@ syscall_handler (struct intr_frame *f) {
 			int size = (int) f->R.rdx;
 			if( buf == NULL || !is_valid_buffer( buf, size ) )
 			{
-				// TODO: exit(-1))
-				return ;
+				sys_exit (-1);
+				return;
 			}
 
 			if (fd == STDOUT_FILENO) {
@@ -104,7 +110,7 @@ syscall_handler (struct intr_frame *f) {
 			int size = (int) f->R.rdx;
 			if( buf == NULL || !is_valid_buffer( buf, size ) )
 			{
-				// TODO: exit(-1))
+				sys_exit (-1);
 				return ;
 			}
 
@@ -116,7 +122,7 @@ syscall_handler (struct intr_frame *f) {
 			char *thread_name = (char*) f->R.rdi;
 			if( !is_valid_string( thread_name ) )
 			{
-				// TODO: exit(-1))
+				sys_exit (-1);
 				return ;
 			}
 			//TODO: SYS_FORK
@@ -128,7 +134,7 @@ syscall_handler (struct intr_frame *f) {
 			char *cmd_line = (char*) f->R.rdi;
 			if( !is_valid_string( cmd_line ) )
 			{
-				// TODO: exit(-1))
+				sys_exit (-1);
 				return ;
 			}
 
@@ -140,7 +146,7 @@ syscall_handler (struct intr_frame *f) {
 			char *file_name = (char*) f->R.rdi;
 			if( !is_valid_string( file_name ) )
 			{
-				// TODO: exit(-1))
+				sys_exit (-1);
 				return ;
 			}
 
@@ -152,7 +158,7 @@ syscall_handler (struct intr_frame *f) {
 			char *file_name = (char*) f->R.rdi;
 			if( !is_valid_string( file_name ) )
 			{
-				// TODO: exit(-1))
+				sys_exit (-1);
 				return ;
 			}
 
@@ -164,7 +170,7 @@ syscall_handler (struct intr_frame *f) {
 			char *file_name = (char*) f->R.rdi;
 			if( !is_valid_string( file_name ) )
 			{
-				// TODO: exit(-1))
+				sys_exit (-1);
 				return ;
 			}
 
