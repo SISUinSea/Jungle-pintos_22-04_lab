@@ -7,10 +7,17 @@
 #include "userprog/gdt.h"
 #include "threads/flags.h"
 #include "intrinsic.h"
+#include "filesys/file.h"
+#include "filesys/filesys.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
 
+struct fd_entry {
+	int fd;
+	struct file *file;
+	struct list_elem file_elem;
+};
 
 /* System call.
  *
@@ -55,7 +62,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		}
 		case SYS_OPEN:
 		{
-			struct fd_entry;
+			
 		}
 		case SYS_FILESIZE:
 		{
