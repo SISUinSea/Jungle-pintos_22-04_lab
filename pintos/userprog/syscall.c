@@ -58,6 +58,12 @@ syscall_handler (struct intr_frame *f) {
 		}
 		case SYS_EXIT:
 		{
+			#ifdef USERPROG
+			thread_current()->exit_status = (int) f->R.rdi;
+			thread_exit();
+			#endif
+			break;
+		}
         case SYS_HALT:
 		{
 			printf("Syetem Halted\n");
