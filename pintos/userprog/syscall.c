@@ -52,13 +52,13 @@ syscall_handler (struct intr_frame *f) {
 			int size = (int) f->R.rdx;
 
 			if (fd == STDOUT_FILENO) {
-				putbuf(buf, size);	
+				putbuf(buf, size);
 				f->R.rax = size;	// write()의 반환값으로 출력한 바이트 수를 돌려준다.
 			}
 			break;
 		}
 		case SYS_EXIT:
-		{
+		{ 
 			#ifdef USERPROG
 			thread_current()->exit_status = (int) f->R.rdi;
 			thread_exit();
@@ -74,6 +74,6 @@ syscall_handler (struct intr_frame *f) {
 		default:
 		    thread_current()->exit_status = -1;
 			thread_exit(); //알 수 없는 syscall이 들어오면 비정상 종료 상태(-1)를 저장하고 종료한다
-			break;
+            break;
 	}
 }
