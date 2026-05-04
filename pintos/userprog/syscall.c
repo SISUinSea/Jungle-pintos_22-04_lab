@@ -39,7 +39,7 @@ syscall_init (void) {
 static bool
 is_valid_ptr(char *buf)
 {
-	if ( !is_user_vaddr(buf) )
+	if ( !is_user_vaddr(buf) || pml4_get_page (thread_current ()->pml4, buf ) == NULL)
 		return false;
 	return true;
 }
