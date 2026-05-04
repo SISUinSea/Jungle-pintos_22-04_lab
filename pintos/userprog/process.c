@@ -124,7 +124,7 @@ struct fork_info {
 tid_t
 process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	/* Clone current thread to new thread.*/
-	struct fork_info *fi = malloc(sizeof(struct fork_info));
+	struct fork_info *fi = malloc (sizeof (struct fork_info));
 	if (fi == NULL) {
 		return TID_ERROR;
 	}
