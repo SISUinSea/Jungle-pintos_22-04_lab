@@ -36,7 +36,13 @@ syscall_init (void) {
 	write_msr(MSR_SYSCALL_MASK,
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
 }
-
+static bool
+is_valid_ptr(char *buf)
+{
+	if ( !is_user_vaddr(buf) )
+		return false;
+	return true;
+}
 /* The main system call interface */
 void
 syscall_handler (struct intr_frame *f UNUSED) {
