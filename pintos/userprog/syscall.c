@@ -43,6 +43,21 @@ is_valid_ptr(char *buf)
 		return false;
 	return true;
 }
+static bool
+is_valid_string(char *buf)
+{
+	for( int i=0 ; ; i++)
+	{
+		if ( !is_valid_ptr( buf + i ) )
+		{
+			return false;
+		}
+		if( buf[i] == '\0'){
+			break;
+		}
+	}
+	return true;
+}
 /* The main system call interface */
 void
 syscall_handler (struct intr_frame *f UNUSED) {
@@ -57,10 +72,71 @@ syscall_handler (struct intr_frame *f UNUSED) {
 			int size = (int) f->R.rdx;
 
 			if (fd == STDOUT_FILENO) {
-				putbuf(buf, size);	
+				putbuf(buf, size);
 			}
 			break;
 		}
+
+		case SYS_FORK:
+		{
+			char *thread_name = (char*) f->R.rdi;
+			if( !is_valid_string( thread_name ) )
+			{
+				// TODO: exit(-1))
+				return ;
+			}
+			//TODO: SYS_FORK
+			break;
+		}
+
+		case SYS_EXEC:
+		{
+			char *cmd_line = (char*) f->R.rdi;
+			if( !is_valid_string( cmd_line ) )
+			{
+				// TODO: exit(-1))
+				return ;
+			}
+
+			break;
+		}
+
+		case SYS_CREATE :
+		{
+			char *file_name = (char*) f->R.rdi;
+			if( !is_valid_string( file_name ) )
+			{
+				// TODO: exit(-1))
+				return ;
+			}
+
+			break;
+		}
+
+		case SYS_REMOVE :
+		{
+			char *file_name = (char*) f->R.rdi;
+			if( !is_valid_string( file_name ) )
+			{
+				// TODO: exit(-1))
+				return ;
+			}
+
+			break;
+		}
+
+		case SYS_OPEN :
+		{
+			char *file_name = (char*) f->R.rdi;
+			if( !is_valid_string( file_name ) )
+			{
+				// TODO: exit(-1))
+				return ;
+			}
+
+			break;
+		}
+
 		case SYS_EXIT:
 		{
 			char *name = thread_current ()->name;
