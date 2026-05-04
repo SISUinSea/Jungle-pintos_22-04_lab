@@ -339,18 +339,14 @@ process_exit (void) {
 	struct child_status *cs = curr->wait_status;
 
 	if (cs != NULL) {
-		printf("%s: exit(%d)\n", curr->name, cs->exit_code);
-
+		cs->exit_code = curr->exit_status;
 		cs->exited = true;
 		sema_up (&cs->wait_sema);
 	}
-	
 
 	if (curr->pml4 != NULL){ //이 프로세스가 user process인 경우에만 종료 메시지를 출력한다.
 	    printf("%s: exit(%d)\n", curr->name, curr->exit_status); //프로그램 이름과 종료 상태를 출력한다.
-
-
-	} 
+	}
 	process_cleanup ();
 }
 
