@@ -48,7 +48,13 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		case SYS_FORK:
 		{
 			char *thread_name = (char *) f->R.rdi;
-			process_fork (thread_name, f);
+			f->R.rax = (tid_t) process_fork (thread_name, f);
+			break;
+		}
+		case SYS_WAIT:
+		{
+			tid_t tid = (tid_t) f->R.rdi;
+			f->R.rax = process_wait (tid);
 			break;
 		}
 		case SYS_WRITE:
@@ -65,6 +71,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		case SYS_EXIT:
 		{
 			char *name = thread_current ()->name;
+			// cs
 			struct child_status *cs = thread_current ()->wait_status;
 			if (cs != NULL) {
 				cs->exit_code = (int) f->R.rdi;

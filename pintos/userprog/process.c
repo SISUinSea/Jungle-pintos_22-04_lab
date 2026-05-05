@@ -258,6 +258,7 @@ __do_fork (void *aux) {
 
 	/* Finally, switch to the newly created process. */
 
+	if_.R.rax = 0;
 	sema_up(&cs->wait_sema);
 	if (succ)
 		do_iret (&if_);
