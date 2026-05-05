@@ -1,7 +1,5 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
-#define USERPROG
-
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
@@ -126,7 +124,7 @@ struct thread {
 	/* Variables for wait-exit(parent - child) synchronization. */
 	struct list children;
 	struct child_status *wait_status;
-	
+
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */

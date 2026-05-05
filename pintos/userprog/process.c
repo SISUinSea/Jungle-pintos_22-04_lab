@@ -195,6 +195,7 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 	}
 
 	/* 2. Resolve VA from the parent's page map level 4. */
+	
 	parent_page = pml4_get_page (parent->pml4, va);
 	if (parent_page == NULL 
 		// || ((uint64_t) parent_page & 0x001) == 0
@@ -431,13 +432,11 @@ process_exit (void) {
 	struct child_status *cs = curr->wait_status;
 
 	if (cs != NULL) {
-		printf("%s: exit(%d)\n", curr->name, cs->exit_code);
-
+		if (curr->pml4 != NULL)
+			printf("%s: exit(%d)\n", curr->name, cs->exit_code);
 		cs->exited = true;
 		sema_up (&cs->wait_sema);
 	}
-	
-
 	process_cleanup ();
 }
 
