@@ -117,6 +117,7 @@ initd (void* ii) {
 struct fork_info {
 	struct thread * t;
 	struct intr_frame *if_;
+	struct child_status *cs;
 };
 
 /* Clones the current process as `name`. Returns the new process's thread id, or
@@ -135,8 +136,30 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	}
 	memcpy (fi->if_, if_, sizeof (struct intr_frame));
 	fi->t = thread_current ();
-	return thread_create (name,
-			PRI_DEFAULT, __do_fork, fi);
+	ASSERT(fi->t != NULL);
+	ASSERT(fi->t->pml4 != NULL);
+
+
+	struct child_status *cs = malloc (sizeof (struct child_status));
+	if (cs == NULL)  {
+		free (fi->if_);
+		free (fi);
+		return TID_ERROR;
+	}
+	fi->cs = cs;
+	cs->tid = -1;
+	cs->waited = true;
+	cs->exited = false;
+	sema_init (&cs->wait_sema, 0);
+	list_push_back (&thread_current ()->children, &cs->elem);
+	
+	tid_t tid = thread_create (name, PRI_DEFAULT, __do_fork, fi);
+	cs->tid = tid;
+	
+	sema_down (&cs->wait_sema);
+	list_remove (&cs->elem);
+	free(cs);
+	return tid;
 }
 
 #ifndef VM
@@ -150,19 +173,29 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 	void *newpage;
 	bool writable;
 
-	printf("%p, %p: is user vaddr ?%d\n", *pte, va, is_user_vaddr(va));
+	// printf("%p, is kernel pte? %d ,%p: va is user vaddr ?%d\n", *pte, is_kern_pte(pte),va, is_user_vaddr(va));
 
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
 	if (is_kern_pte (pte)) {
-		return false;
+		return true;
 	}
 
 	/* 2. Resolve VA from the parent's page map level 4. */
 	parent_page = pml4_get_page (parent->pml4, va);
+	if (parent_page == NULL 
+		// || ((uint64_t) parent_page & 0x001) == 0
+	) {
+		// printf ("fail to resolve parent page...\n");
+		return true;
+	}
 
 	/* 3. TODO: Allocate new PAL_USER page for the child and set result to
 	 *    TODO: NEWPAGE. */
 	newpage = palloc_get_page (PAL_USER | PAL_ZERO);
+	if (newpage == NULL) {
+		printf ("newpage allocation fail...\n");
+		return false;
+	}
 
 	/* 4. TODO: Duplicate parent's page to the new page and
 	 *    TODO: check whether parent's page is writable or not (set WRITABLE
@@ -188,10 +221,11 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 static void
 __do_fork (void *aux) {
 	struct intr_frame if_;
-	struct thread *parent = ((struct fork_info *) aux)->t;
+	struct thread *parent = (struct thread*) (((struct fork_info *) aux)->t);
 	struct thread *current = thread_current ();
 	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
 	struct intr_frame *parent_if = ((struct fork_info *) aux)->if_;
+	struct child_status *cs = ((struct fork_info *) aux)->cs;
 	bool succ = true;
 
 	/* 1. Read the cpu context to local stack. */
@@ -208,6 +242,8 @@ __do_fork (void *aux) {
 	if (!supplemental_page_table_copy (&current->spt, &parent->spt))
 		goto error;
 #else
+	ASSERT(parent != NULL);
+	ASSERT(parent->pml4 != NULL);
 	if (!pml4_for_each (parent->pml4, duplicate_pte, parent))
 		goto error;
 #endif
@@ -221,6 +257,8 @@ __do_fork (void *aux) {
 	process_init ();
 
 	/* Finally, switch to the newly created process. */
+
+	sema_up(&cs->wait_sema);
 	if (succ)
 		do_iret (&if_);
 error:
