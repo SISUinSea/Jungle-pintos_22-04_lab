@@ -26,7 +26,7 @@
 
 static void process_cleanup (void);
 static bool load (const char *file_name, struct intr_frame *if_);
-static void initd (void *f_name);
+static void initd (void *ii);
 static void __do_fork (void *);
 
 /* General process initializer for initd and other process. */
@@ -34,6 +34,11 @@ static void
 process_init (void) {
 	struct thread *current = thread_current ();
 }
+
+struct initd_info {
+	void * f_name;
+	struct child_status *cs;
+};
 
 /* Starts the first userland program, called "initd", loaded from FILE_NAME.
  * The new thread may be scheduled (and may even exit)
@@ -56,18 +61,50 @@ process_create_initd (const char *file_name) {
 	char *save_ptr;
 	strlcpy(process_name, file_name, sizeof process_name);
 	strtok_r(process_name, " ", &save_ptr);
-	
+
+	/* current thread-> children 리스트에 새로 만들 thread를 등록할 준비를 함.*/
+	struct child_status *new_cs = malloc(sizeof(struct child_status));
+	if (new_cs == NULL) {
+		return TID_ERROR;
+	}
+	new_cs->tid = -1;
+	new_cs->waited = false;
+	new_cs->exited = false;
+	new_cs->exit_code = -1;
+	sema_init (&new_cs->wait_sema, 0);
+	list_push_back (&thread_current ()->children, &new_cs->elem);
+
+	struct initd_info *ii = malloc (sizeof (struct initd_info));
+	if (ii == NULL) {
+		list_remove (&new_cs->elem);
+		free (new_cs);
+		return TID_ERROR;
+	}
+	ii->cs = new_cs;
+	ii->f_name = fn_copy;
+
 
 	/* Create a new thread to execute FILE_NAME. */
-	tid = thread_create (process_name, PRI_DEFAULT, initd, fn_copy);
-	if (tid == TID_ERROR)
+	tid = thread_create (process_name, PRI_DEFAULT, initd, ii);
+	if (tid == TID_ERROR) {
 		palloc_free_page (fn_copy);
+		list_remove (&new_cs->elem);
+		free (new_cs);
+		free(ii);
+	} else {
+		new_cs->tid = tid;
+	}
+		
 	return tid;
 }
 
 /* A thread function that launches first user process. */
 static void
-initd (void *f_name) {
+initd (void* ii) {
+	char *f_name = ((struct initd_info *) ii)->f_name;
+	struct child_status *cs = ((struct initd_info *) ii)->cs;
+	thread_current ()->wait_status = cs;
+	free(ii);
 #ifdef VM
 	supplemental_page_table_init (&thread_current ()->spt);
 #endif
@@ -265,11 +302,36 @@ process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
-	int wait = 1000000000;
-	while (wait > 0) {
-		wait --;
+	/*  */
+
+	struct thread* cur = thread_current ();
+	struct child_status *cs = NULL;
+	for (struct list_elem *e = list_begin (&cur->children); 
+		e != list_end(&cur->children); 
+		e = list_next (e)) {
+		cs = list_entry (e, struct child_status, elem);
+		if (cs->tid == child_tid) {
+			break;
+		}
+		cs = NULL;
 	}
-	return -1;
+
+	if (cs != NULL) {
+		cs->waited = true;
+		sema_down (&cs->wait_sema);
+
+		/* after wake up... */
+		list_remove (&cs->elem);
+		int exit_code = cs->exit_code;
+		bool exited = cs->exited;
+		free (cs);
+		if (exited == false) {
+			return -1;
+		}
+		return exit_code;
+	}
+	else 
+		return -1;
 }
 
 /* Exit the process. This function is called by thread_exit (). */
@@ -291,6 +353,15 @@ process_exit (void) {
 		file_close(entry->file);
 		free(entry);
 	}
+	struct child_status *cs = curr->wait_status;
+
+	if (cs != NULL) {
+		printf("%s: exit(%d)\n", curr->name, cs->exit_code);
+
+		cs->exited = true;
+		sema_up (&cs->wait_sema);
+	}
+	
 
 	process_cleanup ();
 }

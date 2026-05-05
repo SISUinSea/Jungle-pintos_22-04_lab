@@ -1,10 +1,12 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
+#define USERPROG
 
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
 #include "threads/interrupt.h"
+#include "threads/synch.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -85,6 +87,18 @@ typedef int tid_t;
  * only because they are mutually exclusive: only a thread in the
  * ready state is on the run queue, whereas only a thread in the
  * blocked state is on a semaphore wait list. */
+
+#ifdef USERPROG
+struct child_status {
+	tid_t tid;
+	bool exited;
+	bool waited;
+	int exit_code;
+	struct semaphore wait_sema;
+	struct list_elem elem;
+};
+#endif
+
 struct thread {
 	/* Owned by thread.c. */
 	tid_t tid;                          /* Thread identifier. */
@@ -108,6 +122,11 @@ struct thread {
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
 	struct list fd_table;
+	
+	/* Variables for wait-exit(parent - child) synchronization. */
+	struct list children;
+	struct child_status *wait_status;
+	
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */

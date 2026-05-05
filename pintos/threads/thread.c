@@ -445,6 +445,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	#ifdef USERPROG
 	list_init (&t->fd_table);
 	#endif
+	list_init (&t->children);
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
