@@ -7,6 +7,7 @@
 #include "userprog/gdt.h"
 #include "threads/flags.h"
 #include "intrinsic.h"
+#include "userprog/process.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -44,6 +45,18 @@ syscall_handler (struct intr_frame *f UNUSED) {
 
 	switch (syscall_num)
 	{
+		case SYS_FORK:
+		{
+			char *thread_name = (char *) f->R.rdi;
+			f->R.rax = (tid_t) process_fork (thread_name, f);
+			break;
+		}
+		case SYS_WAIT:
+		{
+			tid_t tid = (tid_t) f->R.rdi;
+			f->R.rax = process_wait (tid);
+			break;
+		}
 		case SYS_WRITE:
 		{
 			int fd = (int) f->R.rdi;
@@ -57,10 +70,9 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		}
 		case SYS_EXIT:
 		{
-			char *name = thread_current ()->name;
-			struct child_status *cs = thread_current ()->wait_status;
-			if (cs != NULL) {
-				cs->exit_code = (int) f->R.rdi;
+			struct thread* current = thread_current ();
+			if (current->wait_status != NULL) {
+				current->wait_status->exit_code = (int) f->R.rdi;
 			}
 
 			thread_exit ();
