@@ -131,6 +131,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 }
 
 int find_fd_entry (int fd) {
+	struct thread *cur = thread_current();
 	for (struct list_elem *e = list_begin(&cur->fd_table); e != list_end(&cur->fd_table); e = list_next(e)) {
 		struct fd_entry *fd_entry = list_entry(e, struct fd_entry, file_elem);
 		if (fd_entry->fd == fd)
