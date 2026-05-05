@@ -64,7 +64,16 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		}
 		case SYS_CREATE:
 		{
-			
+			struct file *file = f->R.rdi;
+			unsigned initial_size = f->R.rdi;
+			file = malloc(initial_size);
+			if (initial_size == NULL) {
+				f->R.rax = -1;
+				break;
+			}
+
+			f->R.rax = filesys_create (file, initial_size); // 이 함수 선언에 분명 name을 인자로 받는다고 써있는데 왜 file을 받지?
+			break;
 		}
 		case SYS_OPEN:
 		{
