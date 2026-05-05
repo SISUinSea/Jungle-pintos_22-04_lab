@@ -28,6 +28,11 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+/* MLFQS에서 사용하는 Fixed Point */
+typedef int fixed_t;				/* 타입 이름 */
+#define FIXED_SCALE (1 << 14)
+
+
 /* A kernel thread or user process.
  *
  * Each thread structure is stored in its own 4 kB page.  The
@@ -94,8 +99,13 @@ struct thread {
 	int64_t wakeup_tick;				/* Record when this thread to wake up. (언제 깨워야 하는지 기록하는 변수) */
 
 	/* Shared between thread.c and synch.c. */
-	struct list_elem elem;              /* List element. 세마포의 Waiter list element로 쓰인다. */
+	struct list_elem all_elem;          /* All List element. */
+	struct list_elem elem;              /* List element. */
 	struct list_elem sleep_elem;		/* Sleep List element. */
+	//recent_cpu, nice 선언
+	fixed_t recent_cpu;
+	int nice;
+
 
 	/* Variables for donation */
 	int base_priority;
@@ -154,5 +164,10 @@ void do_iret (struct intr_frame *tf);
 
 void thread_sleep (int64_t ticks);
 void thread_wakeup (void);
+struct list* high_Q(struct list *mlfqs);
+void priority_all_update(struct list mlfqs[64]);
+
+void mlfqs_update_all_per_sec(void);
+
 
 #endif /* threads/thread.h */
