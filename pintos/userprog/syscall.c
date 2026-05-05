@@ -13,6 +13,7 @@
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
+int find_fd_entry(int fd);
 
 struct fd_entry {
 	int fd;
@@ -61,6 +62,10 @@ syscall_handler (struct intr_frame *f UNUSED) {
 			thread_exit ();
 			break;
 		}
+		case SYS_CREATE:
+		{
+			
+		}
 		case SYS_OPEN:
 		{
 			struct thread *cur = thread_current();
@@ -78,7 +83,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 				break;
 			}
 
-			int max_fd = STDOUT_FILENO;
+			int max_fd = 1;
 			for (struct list_elem *e = list_begin(&cur->fd_table); e != list_end(&cur->fd_table); e = list_next(e)) {
 				struct fd_entry *fd_entry = list_entry(e, struct fd_entry, file_elem);
 				if (fd_entry->fd > max_fd)
@@ -90,6 +95,10 @@ syscall_handler (struct intr_frame *f UNUSED) {
 			list_push_back(&cur->fd_table, &entry->file_elem);
 			f->R.rax = entry->fd;
 			break;
+		}
+		case SYS_CLOSE:
+		{
+
 		}
 		case SYS_FILESIZE:
 		{
@@ -116,4 +125,14 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		default:
 			break;
 	}
+}
+
+int find_fd_entry (int fd) {
+	for (struct list_elem *e = list_begin(&cur->fd_table); e != list_end(&cur->fd_table); e = list_next(e)) {
+		struct fd_entry *fd_entry = list_entry(e, struct fd_entry, file_elem);
+		if (fd_entry->fd == fd)
+			return fd_entry->fd;
+	}
+
+	return NULL;
 }
