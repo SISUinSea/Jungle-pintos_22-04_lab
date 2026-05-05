@@ -128,7 +128,8 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	if (fi == NULL) {
 		return TID_ERROR;
 	}
-	fi->if_ = if_;
+	fi->if_ = malloc (sizeof (struct intr_frame));
+	memcpy (fi->if_, if_, sizeof (struct intr_frame));
 	fi->t = thread_current ();
 	return thread_create (name,
 			PRI_DEFAULT, __do_fork, fi);
