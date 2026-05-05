@@ -38,6 +38,23 @@ struct initd_info {
 	struct child_status *cs;
 };
 
+struct child_status *
+init_child_status (struct thread* current) {
+	/* current thread-> children 리스트에 새로 만들 thread를 등록할 준비를 함.*/
+	struct child_status *cs = malloc(sizeof(struct child_status));
+	if (cs == NULL) {
+		return NULL;
+	}
+	cs->tid = -1;
+	cs->waited = false;
+	cs->exited = false;
+	cs->exit_code = -1;
+	sema_init (&cs->wait_sema, 0);
+	list_push_back (&thread_current ()->children, &cs->elem);
+
+	return cs;
+}
+
 /* Starts the first userland program, called "initd", loaded from FILE_NAME.
  * The new thread may be scheduled (and may even exit)
  * before process_create_initd() returns. Returns the initd's
@@ -60,18 +77,8 @@ process_create_initd (const char *file_name) {
 	strlcpy(process_name, file_name, sizeof process_name);
 	strtok_r(process_name, " ", &save_ptr);
 
-	/* current thread-> children 리스트에 새로 만들 thread를 등록할 준비를 함.*/
-	struct child_status *new_cs = malloc(sizeof(struct child_status));
-	if (new_cs == NULL) {
-		return TID_ERROR;
-	}
-	new_cs->tid = -1;
-	new_cs->waited = false;
-	new_cs->exited = false;
-	new_cs->exit_code = -1;
-	sema_init (&new_cs->wait_sema, 0);
-	list_push_back (&thread_current ()->children, &new_cs->elem);
-
+	struct child_status *new_cs = init_child_status (thread_current ());
+	
 	struct initd_info *ii = malloc (sizeof (struct initd_info));
 	if (ii == NULL) {
 		list_remove (&new_cs->elem);
@@ -154,6 +161,13 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	list_push_back (&thread_current ()->children, &cs->elem);
 	
 	tid_t tid = thread_create (name, PRI_DEFAULT, __do_fork, fi);
+	if (tid == TID_ERROR) {
+		list_remove (&cs->elem);
+		free (cs);
+		free (fi->if_);
+		free (fi);
+		return TID_ERROR;
+	}
 	cs->tid = tid;
 	
 	sema_down (&cs->wait_sema);
