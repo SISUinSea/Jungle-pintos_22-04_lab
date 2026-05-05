@@ -7,6 +7,7 @@
 #include <string.h>
 #include "userprog/gdt.h"
 #include "userprog/tss.h"
+#include "userprog/fd.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -17,6 +18,7 @@
 #include "threads/thread.h"
 #include "threads/mmu.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 #include "intrinsic.h"
 #ifdef VM
 #include "vm/vm.h"
@@ -305,7 +307,7 @@ process_exec (void *f_name) {
 	char *argv_tokens[32] = { 0 };
 	uint64_t arg_addrs[32] = { 0 };
 	char *next_ptr;
-	int i = 0;
+	int token_size = 0;
 
 	arg = strtok_r(f_name, " ", &next_ptr);
 
@@ -324,10 +326,10 @@ process_exec (void *f_name) {
 
 		for(int j = arg_count-1 ; j >= 0; j--)
 		{
-			i = strlen(argv_tokens[j]) + 1;
-			_if.rsp -= i;
+			token_size = strlen(argv_tokens[j]) + 1;
+			_if.rsp -= token_size;
 			arg_addrs[j] = _if.rsp;
-			memcpy ((void*)_if.rsp, argv_tokens[j], i);
+			memcpy ((void*)_if.rsp, argv_tokens[j], token_size);
 		}
 
 		int j = _if.rsp % 8;
@@ -343,6 +345,7 @@ process_exec (void *f_name) {
 		}
 
 		_if.R.rsi = _if.rsp;
+		
 		_if.rsp -= 8;
 		memset ((void *) _if.rsp, 0, 8);
 
@@ -410,6 +413,21 @@ process_wait (tid_t child_tid UNUSED) {
 void
 process_exit (void) {
 	struct thread *curr = thread_current ();
+	/* TODO: Your code goes here.
+	 * TODO: Implement process termination message (see
+	 * TODO: project2/process_termination.html).
+	 * TODO: We recommend you to implement process resource cleanup here. */
+	
+	struct list *fd_table = &curr->fd_table;
+	struct list_elem *e = NULL;
+	
+	while (!list_empty(fd_table)) {
+		e = list_begin(fd_table);
+		struct fd_entry *entry = list_entry(e, struct fd_entry, file_elem);
+		list_remove(e);
+		file_close(entry->file);
+		free(entry);
+	}
 	struct child_status *cs = curr->wait_status;
 
 	if (cs != NULL) {
