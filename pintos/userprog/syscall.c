@@ -70,12 +70,10 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		}
 		case SYS_EXIT:
 		{
-			char *name = thread_current ()->name;
-			// cs
-			struct child_status *cs = thread_current ()->wait_status;
-			if (cs != NULL) {
-				cs->exit_code = (int) f->R.rdi;
-			}
+			struct thread* current = thread_current ();
+
+			current->wait_status->exit_code = (int) f->R.rdi;
+
 
 			thread_exit ();
 			break;

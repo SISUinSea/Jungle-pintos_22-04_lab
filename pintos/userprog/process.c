@@ -157,8 +157,6 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	cs->tid = tid;
 	
 	sema_down (&cs->wait_sema);
-	list_remove (&cs->elem);
-	free(cs);
 	return tid;
 }
 
@@ -226,6 +224,8 @@ __do_fork (void *aux) {
 	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
 	struct intr_frame *parent_if = ((struct fork_info *) aux)->if_;
 	struct child_status *cs = ((struct fork_info *) aux)->cs;
+
+	current->wait_status = cs;
 	bool succ = true;
 
 	/* 1. Read the cpu context to local stack. */
@@ -379,21 +379,34 @@ process_wait (tid_t child_tid UNUSED) {
 	}
 
 	if (cs != NULL) {
-		cs->waited = true;
-		sema_down (&cs->wait_sema);
-
-		/* after wake up... */
-		list_remove (&cs->elem);
-		int exit_code = cs->exit_code;
-		bool exited = cs->exited;
-		free (cs);
-		if (exited == false) {
-			return -1;
-		}
-		return exit_code;
+		
 	}
-	else 
+	else {
+		// cs = malloc (sizeof (struct child_status));
+		// if (cs == NULL) {
+		// 	return -1;
+		// }
+		// cs->tid = child_tid;
+		// cs->exited = false;
+		// cs->exit_code = -1;
+		// list_push_back (&cur->children, &cs->elem);
 		return -1;
+	}
+
+	cs->waited = true;
+	sema_down (&cs->wait_sema);
+
+	/* after wake up... */
+	list_remove (&cs->elem);
+	int exit_code = cs->exit_code;
+	// printf("==== ... exit code... %d\n", exit_code);
+	bool exited = cs->exited;
+	free (cs);
+	// if (exited == false) {
+	// 	return -1;
+	// }
+	return exit_code;
+		
 }
 
 /* Exit the process. This function is called by thread_exit (). */
