@@ -129,6 +129,10 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 		return TID_ERROR;
 	}
 	fi->if_ = malloc (sizeof (struct intr_frame));
+	if (fi->if_ == NULL) {
+		free(fi);
+		return TID_ERROR;
+	}
 	memcpy (fi->if_, if_, sizeof (struct intr_frame));
 	fi->t = thread_current ();
 	return thread_create (name,
@@ -145,6 +149,8 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 	void *parent_page;
 	void *newpage;
 	bool writable;
+
+	printf("%p, %p: is user vaddr ?%d\n", *pte, va, is_user_vaddr(va));
 
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
 	if (is_kern_pte (pte)) {
