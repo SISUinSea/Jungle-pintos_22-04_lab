@@ -392,18 +392,7 @@ process_wait (tid_t child_tid UNUSED) {
 		cs = NULL;
 	}
 
-	if (cs != NULL) {
-		
-	}
-	else {
-		// cs = malloc (sizeof (struct child_status));
-		// if (cs == NULL) {
-		// 	return -1;
-		// }
-		// cs->tid = child_tid;
-		// cs->exited = false;
-		// cs->exit_code = -1;
-		// list_push_back (&cur->children, &cs->elem);
+	if (cs == NULL) {
 		return -1;
 	}
 
@@ -413,14 +402,8 @@ process_wait (tid_t child_tid UNUSED) {
 	/* after wake up... */
 	list_remove (&cs->elem);
 	int exit_code = cs->exit_code;
-	// printf("==== ... exit code... %d\n", exit_code);
-	bool exited = cs->exited;
 	free (cs);
-	// if (exited == false) {
-	// 	return -1;
-	// }
 	return exit_code;
-		
 }
 
 /* Exit the process. This function is called by thread_exit (). */
