@@ -74,8 +74,10 @@ is_valid_string(char *buf)
 }
 static void
 sys_exit (int status) {
-  struct thread *curr = thread_current ();
+#ifdef USERPROG
+	struct thread *curr = thread_current ();
   curr->exit_status = status;
+#endif
   thread_exit ();
 }
 /* The main system call interface */
