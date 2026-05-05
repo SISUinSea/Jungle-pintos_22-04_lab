@@ -18,6 +18,7 @@
 #include "threads/thread.h"
 #include "threads/mmu.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 #include "intrinsic.h"
 #ifdef VM
 #include "vm/vm.h"
@@ -280,13 +281,13 @@ process_exit (void) {
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
 	
-	struct list fd_table = curr->fd_table;
-	struct list_elem *e = list_begin(&fd_table);
+	struct list *fd_table = &curr->fd_table;
+	struct list_elem *e = NULL;
 	
-	while (e != list_end(&fd_table)) {
-		e = list_begin(&fd_table);
-		list_remove(e);
+	while (!list_empty(fd_table)) {
+		e = list_begin(fd_table);
 		struct fd_entry *entry = list_entry(e, struct fd_entry, file_elem);
+		list_remove(e);
 		file_close(entry->file);
 		free(entry);
 	}
