@@ -7,6 +7,7 @@
 #include <string.h>
 #include "userprog/gdt.h"
 #include "userprog/tss.h"
+#include "userprog/fd.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -278,6 +279,17 @@ process_exit (void) {
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
+	
+	struct list fd_table = curr->fd_table;
+	struct list_elem *e = list_begin(&fd_table);
+	
+	while (e != list_end(&fd_table)) {
+		e = list_begin(&fd_table);
+		list_remove(e);
+		struct fd_entry *entry = list_entry(e, struct fd_entry, file_elem);
+		file_close(entry->file);
+		free(entry);
+	}
 
 	process_cleanup ();
 }
