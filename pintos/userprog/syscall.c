@@ -5,6 +5,7 @@
 #include "threads/thread.h"
 #include "threads/loader.h"
 #include "userprog/gdt.h"
+#include "userprog/fd.h"
 #include "threads/flags.h"
 #include "threads/malloc.h"
 #include "intrinsic.h"
@@ -14,12 +15,6 @@
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
 int find_fd_entry(int fd);
-
-struct fd_entry {
-	int fd;
-	struct file *file;
-	struct list_elem file_elem;
-};
 
 /* System call.
  *
@@ -103,9 +98,15 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		{
 			int fd = f->R.rdi;
 			struct fd_entry *fd_entry = find_fd_entry(fd);
+			if (fd_entry == NULL) {
+				f->R.rax = -1;
+				break;
+			}
+
 			list_remove(&fd_entry->file_elem);
 			file_close(fd_entry->file);
 			free(fd_entry);
+			break;
 		}
 		case SYS_FILESIZE:
 		{
@@ -139,7 +140,7 @@ int find_fd_entry (int fd) {
 	for (struct list_elem *e = list_begin(&cur->fd_table); e != list_end(&cur->fd_table); e = list_next(e)) {
 		struct fd_entry *fd_entry = list_entry(e, struct fd_entry, file_elem);
 		if (fd_entry->fd == fd)
-			return fd_entry->fd;
+			return fd_entry;
 	}
 
 	return NULL;
