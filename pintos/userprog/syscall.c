@@ -47,9 +47,9 @@ is_valid_ptr(char *buf)
 static bool
 is_valid_buffer(char *buf, int size)
 {
-	for(int64_t i = pg_round_down (buf) ; i < buf + size - 1 ; i += PGSIZE)
+	for(uintptr_t i = (uintptr_t)pg_round_down(buf) ; i < (uintptr_t)buf + size - 1 ; i += PGSIZE)
 	{
-		if( !is_user_vaddr(i) || pml4_get_page (thread_current ()->pml4, i ) == NULL)
+		if( !is_user_vaddr((void*) i) || pml4_get_page (thread_current ()->pml4, i ) == NULL)
 		{
 			return false;
 		}
@@ -179,10 +179,7 @@ syscall_handler (struct intr_frame *f) {
 
 		case SYS_EXIT:
 		{ 
-			#ifdef USERPROG
-			thread_current()->exit_status = (int) f->R.rdi;
-			thread_exit();
-			#endif
+			sys_exit ( (int)f->R.rdi);
 			break;
 		}
         case SYS_HALT:
@@ -192,8 +189,7 @@ syscall_handler (struct intr_frame *f) {
 			break;
 		}
 		default:
-		    thread_current()->exit_status = -1;
-			thread_exit(); //알 수 없는 syscall이 들어오면 비정상 종료 상태(-1)를 저장하고 종료한다
+		    sys_exit(-1);
             break;
 	}
 }
