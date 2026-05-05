@@ -101,7 +101,11 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		}
 		case SYS_CLOSE:
 		{
-
+			int fd = f->R.rdi;
+			struct fd_entry *fd_entry = find_fd_entry(fd);
+			list_remove(&fd_entry->file_elem);
+			file_close(fd_entry->file);
+			free(fd_entry);
 		}
 		case SYS_FILESIZE:
 		{
