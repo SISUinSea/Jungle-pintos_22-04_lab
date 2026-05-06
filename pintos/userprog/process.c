@@ -166,7 +166,6 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	list_push_back (&thread_current ()->children, &cs->elem);
 	
 	tid_t tid = thread_create (name, PRI_DEFAULT, __do_fork, fi);
-	printf ("[In parent process] returned tid is... %d==========\n", tid);
 	if (tid == TID_ERROR) {
 		list_remove (&cs->elem);
 		free (cs);
@@ -242,13 +241,12 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
  *       this function. */
 static void
 __do_fork (void *aux) {
-	printf ("[In child process, tid:%d] __do_fork is processed... ==========\n", thread_current ()->tid);
-
 	struct intr_frame if_;
 	struct thread *parent = (struct thread*) (((struct fork_info *) aux)->t);
 	struct thread *current = thread_current ();
 	struct intr_frame *parent_if = ((struct fork_info *) aux)->if_;
 	struct child_status *cs = ((struct fork_info *) aux)->cs;
+	
 
 	current->wait_status = cs;
 	bool succ = true;
