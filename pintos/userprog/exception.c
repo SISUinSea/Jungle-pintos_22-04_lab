@@ -149,7 +149,9 @@ page_fault (struct intr_frame *f) {
 #ifdef USERPROG
 	if ( user == true )
 	{
-		thread_current()->exit_status = -1;
+		struct child_status *cs = thread_current ()->wait_status;
+		if (cs != NULL)
+			cs->exit_code = -1;
 		thread_exit();
 	}
 #endif
@@ -165,4 +167,3 @@ page_fault (struct intr_frame *f) {
 			user ? "user" : "kernel");
 	kill (f);
 }
-

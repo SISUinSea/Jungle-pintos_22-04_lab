@@ -119,12 +119,11 @@ struct thread {
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
-
+	struct list fd_table;
+	
 	/* Variables for wait-exit(parent - child) synchronization. */
 	struct list children;
 	struct child_status *wait_status;
-
-	int exit_status;  //칸을 만든 것 user process가 종료될 때 남기는 상태 정보
 
 #endif
 #ifdef VM

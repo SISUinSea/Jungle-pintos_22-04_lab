@@ -1,16 +1,32 @@
 #include "userprog/syscall.h"
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/loader.h"
 #include "userprog/gdt.h"
+#include "userprog/fd.h"
 #include "threads/flags.h"
-#include "intrinsic.h"
 #include "threads/init.h"
+#include "threads/malloc.h"
+#include "threads/mmu.h"
+#include "threads/palloc.h"
+#include "threads/vaddr.h"
+#include "intrinsic.h"
+#include "userprog/process.h"
+#include "filesys/file.h"
+#include "filesys/filesys.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
+static struct fd_entry *find_fd_entry (int fd);
+static bool is_valid_ptr (const void *ptr);
+static bool is_valid_buffer (const void *buffer, int size);
+static bool is_valid_string (const char *str);
+static bool copy_user_string_to_page (const char *src, char *dst);
+static void sys_exit (int status);
 
 /* System call.
  *
@@ -34,52 +50,71 @@ syscall_init (void) {
 	/* The interrupt service rountine should not serve any interrupts
 	 * until the syscall_entry swaps the userland stack to the kernel
 	 * mode stack. Therefore, we masked the FLAG_FL. */
-	write_msr(MSR_SYSCALL_MASK,
+write_msr(MSR_SYSCALL_MASK,
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
 }
-static bool
-is_valid_ptr(char *buf)
-{
-	if ( !is_user_vaddr(buf) || pml4_get_page (thread_current ()->pml4, buf ) == NULL)
-		return false;
-	return true;
-}
-static bool
-is_valid_buffer(char *buf, int size)
-{
-	for(uintptr_t i = (uintptr_t)pg_round_down(buf) ; i < (uintptr_t)buf + size - 1 ; i += PGSIZE)
-	{
-		if( !is_user_vaddr((void*) i) || pml4_get_page (thread_current ()->pml4, i ) == NULL)
-		{
-			return false;
-		}
-	}
 
-	return true;
-}
 static bool
-is_valid_string(char *buf)
-{
-	for( int i=0 ; ; i++)
-	{
-		if ( !is_valid_ptr( buf + i ) )
-		{
+is_valid_ptr (const void *ptr) {
+	if (ptr == NULL || !is_user_vaddr (ptr))
+		return false;
+	return pml4_get_page (thread_current ()->pml4, ptr) != NULL;
+}
+
+static bool
+is_valid_buffer (const void *buffer, int size) {
+	if (size < 0)
+		return false;
+	if (size == 0)
+		return true;
+	if (buffer == NULL)
+		return false;
+
+	uint64_t start = (uint64_t) buffer;
+	uint64_t end = start + size - 1;
+	if (end < start)
+		return false;
+
+	for (uint64_t page = (uint64_t) pg_round_down ((void *) start);
+			page <= end;
+			page += PGSIZE) {
+		if (!is_valid_ptr ((const void *) page))
 			return false;
-		}
-		if( buf[i] == '\0'){
-			break;
-		}
 	}
 	return true;
 }
+
+static bool
+is_valid_string (const char *str) {
+	for (;;) {
+		if (!is_valid_ptr (str))
+			return false;
+		if (*str == '\0')
+			return true;
+		str++;
+	}
+}
+
+static bool
+copy_user_string_to_page (const char *src, char *dst) {
+	for (size_t i = 0; i < PGSIZE; i++) {
+		if (!is_valid_ptr (src + i))
+			return false;
+		dst[i] = src[i];
+		if (dst[i] == '\0')
+			return true;
+	}
+	return false;
+}
+
 static void
 sys_exit (int status) {
-#ifdef USERPROG
-	struct thread *curr = thread_current ();
-  curr->exit_status = status;
-#endif
-  thread_exit ();
+	struct child_status *cs = thread_current ()->wait_status;
+	if (cs != NULL)
+		cs->exit_code = status;
+	thread_exit ();
 }
+
 /* The main system call interface */
 void
 syscall_handler (struct intr_frame *f) {
@@ -87,111 +122,158 @@ syscall_handler (struct intr_frame *f) {
 
 	switch (syscall_num)
 	{
+		case SYS_HALT:
+		{
+			power_off ();
+			break;
+		}
+		case SYS_FORK:
+		{
+			char *thread_name = (char *) f->R.rdi;
+			if (!is_valid_string (thread_name))
+				sys_exit (-1);
+			f->R.rax = (tid_t) process_fork (thread_name, f);
+			break;
+		}
+		case SYS_EXEC:
+		{
+			char *cmd_line = (char *) f->R.rdi;
+			if (!is_valid_string (cmd_line))
+				sys_exit (-1);
+			char *cmd_line_copy = palloc_get_page (0);
+			if (cmd_line_copy == NULL)
+				sys_exit (-1);
+			if (!copy_user_string_to_page (cmd_line, cmd_line_copy)) {
+				palloc_free_page (cmd_line_copy);
+				sys_exit (-1);
+			}
+			if (process_exec (cmd_line_copy) == -1)
+				sys_exit (-1);
+			break;
+		}
+		case SYS_WAIT:
+		{
+			tid_t tid = (tid_t) f->R.rdi;
+			f->R.rax = process_wait (tid);
+			break;
+		}
+		case SYS_EXIT:
+		{
+			sys_exit ((int) f->R.rdi);
+			break;
+		}
+		case SYS_CREATE:
+		{
+			char *file_name = (char *) f->R.rdi;
+			unsigned initial_size = f->R.rsi;
+			if (!is_valid_string (file_name))
+				sys_exit (-1);
+			f->R.rax = filesys_create (file_name, initial_size);
+			break;
+		}
+		case SYS_REMOVE:
+		{
+			char *file_name = (char *) f->R.rdi;
+			if (!is_valid_string (file_name))
+				sys_exit (-1);
+			break;
+		}
+		case SYS_OPEN:
+		{
+			struct thread *cur = thread_current ();
+			char *file_name = (char *) f->R.rdi;
+			if (!is_valid_string (file_name))
+				sys_exit (-1);
+
+			struct file *file = filesys_open (file_name);
+			if (file == NULL) {
+				f->R.rax = -1;
+				break;
+			}
+
+			struct fd_entry *entry = malloc (sizeof *entry);
+			if (entry == NULL) {
+				file_close (file);
+				f->R.rax = -1;
+				break;
+			}
+
+			int max_fd = 1;
+			for (struct list_elem *e = list_begin (&cur->fd_table);
+					e != list_end (&cur->fd_table);
+					e = list_next (e)) {
+				struct fd_entry *fd_entry =
+					list_entry (e, struct fd_entry, file_elem);
+				if (fd_entry->fd > max_fd)
+					max_fd = fd_entry->fd;
+			}
+
+			entry->fd = max_fd + 1;
+			entry->file = file;
+			list_push_back (&cur->fd_table, &entry->file_elem);
+			f->R.rax = entry->fd;
+			break;
+		}
+		case SYS_FILESIZE:
+		{
+			f->R.rax = -1;
+			break;
+		}
+		case SYS_READ:
+		{
+			char *buf = (char *) f->R.rsi;
+			int size = (int) f->R.rdx;
+			if (buf == NULL || !is_valid_buffer (buf, size))
+				sys_exit (-1);
+			f->R.rax = -1;
+			break;
+		}
 		case SYS_WRITE:
 		{
 			int fd = (int) f->R.rdi;
-			char *buf = (char*) f->R.rsi;
+			char *buf = (char *) f->R.rsi;
 			int size = (int) f->R.rdx;
-			if( buf == NULL || !is_valid_buffer( buf, size ) )
-			{
+			if (buf == NULL || !is_valid_buffer (buf, size))
 				sys_exit (-1);
-				return;
-			}
 
 			if (fd == STDOUT_FILENO) {
-				putbuf(buf, size);
-				f->R.rax = size;	// write()의 반환값으로 출력한 바이트 수를 돌려준다.
+				putbuf (buf, size);
+				f->R.rax = size;
+				break;
 			}
+			f->R.rax = -1;
 			break;
 		}
-
-		case SYS_READ:
+		case SYS_CLOSE:
 		{
-			int fd = (int) f->R.rdi;
-			char *buf = (char*) f->R.rsi;
-			int size = (int) f->R.rdx;
-			if( buf == NULL || !is_valid_buffer( buf, size ) )
-			{
-				sys_exit (-1);
-				return ;
-			}
-
-			break;
-		}
-
-		case SYS_FORK:
-		{
-			char *thread_name = (char*) f->R.rdi;
-			if( !is_valid_string( thread_name ) )
-			{
-				sys_exit (-1);
-				return ;
-			}
-			//TODO: SYS_FORK
-			break;
-		}
-
-		case SYS_EXEC:
-		{
-			char *cmd_line = (char*) f->R.rdi;
-			if( !is_valid_string( cmd_line ) )
-			{
-				sys_exit (-1);
-				return ;
+			int fd = f->R.rdi;
+			struct fd_entry *fd_entry = find_fd_entry (fd);
+			if (fd_entry == NULL) {
+				f->R.rax = -1;
+				break;
 			}
 
-			break;
-		}
-
-		case SYS_CREATE :
-		{
-			char *file_name = (char*) f->R.rdi;
-			if( !is_valid_string( file_name ) )
-			{
-				sys_exit (-1);
-				return ;
-			}
-
-			break;
-		}
-
-		case SYS_REMOVE :
-		{
-			char *file_name = (char*) f->R.rdi;
-			if( !is_valid_string( file_name ) )
-			{
-				sys_exit (-1);
-				return ;
-			}
-
-			break;
-		}
-
-		case SYS_OPEN :
-		{
-			char *file_name = (char*) f->R.rdi;
-			if( !is_valid_string( file_name ) )
-			{
-				sys_exit (-1);
-				return ;
-			}
-
-			break;
-		}
-
-		case SYS_EXIT:
-		{ 
-			sys_exit ( (int)f->R.rdi);
-			break;
-		}
-        case SYS_HALT:
-		{
-			printf("Syetem Halted\n");
-			power_off();
+			list_remove (&fd_entry->file_elem);
+			file_close (fd_entry->file);
+			free (fd_entry);
 			break;
 		}
 		default:
-		    sys_exit(-1);
-            break;
+			sys_exit (-1);
+			break;
 	}
+}
+
+static struct fd_entry *
+find_fd_entry (int fd) {
+	struct thread *cur = thread_current ();
+	for (struct list_elem *e = list_begin (&cur->fd_table);
+			e != list_end (&cur->fd_table);
+			e = list_next (e)) {
+		struct fd_entry *fd_entry = list_entry (e, struct fd_entry, file_elem);
+		if (fd_entry->fd == fd)
+			return fd_entry;
+	}
+
+	return NULL;
 }

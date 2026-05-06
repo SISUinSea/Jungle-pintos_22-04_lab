@@ -7,6 +7,7 @@
 #include <string.h>
 #include "userprog/gdt.h"
 #include "userprog/tss.h"
+#include "userprog/fd.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -17,6 +18,7 @@
 #include "threads/thread.h"
 #include "threads/mmu.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 #include "intrinsic.h"
 #ifdef VM
 #include "vm/vm.h"
@@ -37,6 +39,23 @@ struct initd_info {
 	void * f_name;
 	struct child_status *cs;
 };
+
+struct child_status *
+init_child_status (struct thread* current) {
+	/* current thread-> children 리스트에 새로 만들 thread를 등록할 준비를 함.*/
+	struct child_status *cs = malloc(sizeof(struct child_status));
+	if (cs == NULL) {
+		return NULL;
+	}
+	cs->tid = -1;
+	cs->waited = false;
+	cs->exited = false;
+	cs->exit_code = -1;
+	sema_init (&cs->wait_sema, 0);
+	list_push_back (&thread_current ()->children, &cs->elem);
+
+	return cs;
+}
 
 /* Starts the first userland program, called "initd", loaded from FILE_NAME.
  * The new thread may be scheduled (and may even exit)
@@ -60,18 +79,8 @@ process_create_initd (const char *file_name) {
 	strlcpy(process_name, file_name, sizeof process_name);
 	strtok_r(process_name, " ", &save_ptr);
 
-	/* current thread-> children 리스트에 새로 만들 thread를 등록할 준비를 함.*/
-	struct child_status *new_cs = malloc(sizeof(struct child_status));
-	if (new_cs == NULL) {
-		return TID_ERROR;
-	}
-	new_cs->tid = -1;
-	new_cs->waited = false;
-	new_cs->exited = false;
-	new_cs->exit_code = -1;
-	sema_init (&new_cs->wait_sema, 0);
-	list_push_back (&thread_current ()->children, &new_cs->elem);
-
+	struct child_status *new_cs = init_child_status (thread_current ());
+	
 	struct initd_info *ii = malloc (sizeof (struct initd_info));
 	if (ii == NULL) {
 		list_remove (&new_cs->elem);
@@ -114,13 +123,57 @@ initd (void* ii) {
 	NOT_REACHED ();
 }
 
+struct fork_info {
+	struct thread * t;
+	struct intr_frame *if_;
+	struct child_status *cs;
+};
+
 /* Clones the current process as `name`. Returns the new process's thread id, or
  * TID_ERROR if the thread cannot be created. */
 tid_t
 process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	/* Clone current thread to new thread.*/
-	return thread_create (name,
-			PRI_DEFAULT, __do_fork, thread_current ());
+	struct fork_info *fi = malloc (sizeof (struct fork_info));
+	if (fi == NULL) {
+		return TID_ERROR;
+	}
+	fi->if_ = malloc (sizeof (struct intr_frame));
+	if (fi->if_ == NULL) {
+		free(fi);
+		return TID_ERROR;
+	}
+	memcpy (fi->if_, if_, sizeof (struct intr_frame));
+	fi->t = thread_current ();
+	ASSERT(fi->t != NULL);
+	ASSERT(fi->t->pml4 != NULL);
+
+
+	struct child_status *cs = malloc (sizeof (struct child_status));
+	if (cs == NULL)  {
+		free (fi->if_);
+		free (fi);
+		return TID_ERROR;
+	}
+	fi->cs = cs;
+	cs->tid = -1;
+	cs->waited = true;
+	cs->exited = false;
+	sema_init (&cs->wait_sema, 0);
+	list_push_back (&thread_current ()->children, &cs->elem);
+	
+	tid_t tid = thread_create (name, PRI_DEFAULT, __do_fork, fi);
+	if (tid == TID_ERROR) {
+		list_remove (&cs->elem);
+		free (cs);
+		free (fi->if_);
+		free (fi);
+		return TID_ERROR;
+	}
+	cs->tid = tid;
+	
+	sema_down (&cs->wait_sema);
+	return tid;
 }
 
 #ifndef VM
@@ -134,23 +187,43 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 	void *newpage;
 	bool writable;
 
+	// printf("%p, is kernel pte? %d ,%p: va is user vaddr ?%d\n", *pte, is_kern_pte(pte),va, is_user_vaddr(va));
+
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
+	if (is_kern_pte (pte)) {
+		return true;
+	}
 
 	/* 2. Resolve VA from the parent's page map level 4. */
 	
 	parent_page = pml4_get_page (parent->pml4, va);
+	if (parent_page == NULL 
+		// || ((uint64_t) parent_page & 0x001) == 0
+	) {
+		// printf ("fail to resolve parent page...\n");
+		return true;
+	}
 
 	/* 3. TODO: Allocate new PAL_USER page for the child and set result to
 	 *    TODO: NEWPAGE. */
+	newpage = palloc_get_page (PAL_USER | PAL_ZERO);
+	if (newpage == NULL) {
+		printf ("newpage allocation fail...\n");
+		return false;
+	}
 
 	/* 4. TODO: Duplicate parent's page to the new page and
 	 *    TODO: check whether parent's page is writable or not (set WRITABLE
 	 *    TODO: according to the result). */
+	memcpy (newpage, parent_page, PGSIZE);
+	writable = is_writable (pte);
 
 	/* 5. Add new page to child's page table at address VA with WRITABLE
 	 *    permission. */
 	if (!pml4_set_page (current->pml4, va, newpage, writable)) {
 		/* 6. TODO: if fail to insert page, do error handling. */
+		palloc_free_page (newpage);
+		return false;
 	}
 	return true;
 }
@@ -163,10 +236,13 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 static void
 __do_fork (void *aux) {
 	struct intr_frame if_;
-	struct thread *parent = (struct thread *) aux;
+	struct thread *parent = (struct thread*) (((struct fork_info *) aux)->t);
 	struct thread *current = thread_current ();
 	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
-	struct intr_frame *parent_if;
+	struct intr_frame *parent_if = ((struct fork_info *) aux)->if_;
+	struct child_status *cs = ((struct fork_info *) aux)->cs;
+
+	current->wait_status = cs;
 	bool succ = true;
 
 	/* 1. Read the cpu context to local stack. */
@@ -183,6 +259,8 @@ __do_fork (void *aux) {
 	if (!supplemental_page_table_copy (&current->spt, &parent->spt))
 		goto error;
 #else
+	ASSERT(parent != NULL);
+	ASSERT(parent->pml4 != NULL);
 	if (!pml4_for_each (parent->pml4, duplicate_pte, parent))
 		goto error;
 #endif
@@ -196,6 +274,9 @@ __do_fork (void *aux) {
 	process_init ();
 
 	/* Finally, switch to the newly created process. */
+
+	if_.R.rax = 0;
+	sema_up(&cs->wait_sema);
 	if (succ)
 		do_iret (&if_);
 error:
@@ -227,7 +308,7 @@ process_exec (void *f_name) {
 	char *argv_tokens[32] = { 0 };
 	uint64_t arg_addrs[32] = { 0 };
 	char *next_ptr;
-	int i = 0;
+	int token_size = 0;
 
 	arg = strtok_r(f_name, " ", &next_ptr);
 
@@ -246,10 +327,10 @@ process_exec (void *f_name) {
 
 		for(int j = arg_count-1 ; j >= 0; j--)
 		{
-			i = strlen(argv_tokens[j]) + 1;
-			_if.rsp -= i;
+			token_size = strlen(argv_tokens[j]) + 1;
+			_if.rsp -= token_size;
 			arg_addrs[j] = _if.rsp;
-			memcpy ((void*)_if.rsp, argv_tokens[j], i);
+			memcpy ((void*)_if.rsp, argv_tokens[j], token_size);
 		}
 
 		int j = _if.rsp % 8;
@@ -265,6 +346,7 @@ process_exec (void *f_name) {
 		}
 
 		_if.R.rsi = _if.rsp;
+		
 		_if.rsp -= 8;
 		memset ((void *) _if.rsp, 0, 8);
 
@@ -314,40 +396,47 @@ process_wait (tid_t child_tid UNUSED) {
 		cs = NULL;
 	}
 
-	if (cs != NULL) {
-		cs->waited = true;
-		sema_down (&cs->wait_sema);
-
-		/* after wake up... */
-		list_remove (&cs->elem);
-		int exit_code = cs->exit_code;
-		bool exited = cs->exited;
-		free (cs);
-		if (exited == false) {
-			return -1;
-		}
-		return exit_code;
-	}
-	else 
+	if (cs == NULL) {
 		return -1;
+	}
+
+	cs->waited = true;
+	sema_down (&cs->wait_sema);
+
+	/* after wake up... */
+	list_remove (&cs->elem);
+	int exit_code = cs->exit_code;
+	free (cs);
+	return exit_code;
 }
 
 /* Exit the process. This function is called by thread_exit (). */
 void
 process_exit (void) {
 	struct thread *curr = thread_current ();
+	/* TODO: Your code goes here.
+	 * TODO: Implement process termination message (see
+	 * TODO: project2/process_termination.html).
+	 * TODO: We recommend you to implement process resource cleanup here. */
+	
+	struct list *fd_table = &curr->fd_table;
+	struct list_elem *e = NULL;
+	
+	while (!list_empty(fd_table)) {
+		e = list_begin(fd_table);
+		struct fd_entry *entry = list_entry(e, struct fd_entry, file_elem);
+		list_remove(e);
+		file_close(entry->file);
+		free(entry);
+	}
 	struct child_status *cs = curr->wait_status;
 
 	if (cs != NULL) {
-		cs->exit_code = curr->exit_status;
+		if (curr->pml4 != NULL)
+			printf("%s: exit(%d)\n", curr->name, cs->exit_code);
 		cs->exited = true;
 		sema_up (&cs->wait_sema);
 	}
-#ifdef USERPROG
-	if (curr->pml4 != NULL){ //이 프로세스가 user process인 경우에만 종료 메시지를 출력한다.
-	    printf("%s: exit(%d)\n", curr->name, curr->exit_status); //프로그램 이름과 종료 상태를 출력한다.
-	}
-#endif
 	process_cleanup ();
 }
 
