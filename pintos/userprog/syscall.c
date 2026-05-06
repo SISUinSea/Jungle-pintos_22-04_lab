@@ -12,6 +12,7 @@
 #include "threads/init.h"
 #include "threads/malloc.h"
 #include "threads/mmu.h"
+#include "threads/palloc.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
 #include "userprog/process.h"
@@ -25,6 +26,7 @@ static struct fd_entry *find_fd_entry (int fd);
 static bool is_valid_ptr (const void *ptr);
 static bool is_valid_buffer (const void *buffer, int size);
 static bool is_valid_string (const char *str);
+static bool copy_user_string_to_page (const char *src, char *dst);
 static void sys_exit (int status);
 
 /* System call.
@@ -49,7 +51,7 @@ syscall_init (void) {
 	/* The interrupt service rountine should not serve any interrupts
 	 * until the syscall_entry swaps the userland stack to the kernel
 	 * mode stack. Therefore, we masked the FLAG_FL. */
-	write_msr(MSR_SYSCALL_MASK,
+write_msr(MSR_SYSCALL_MASK,
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
 }
 
@@ -94,6 +96,18 @@ is_valid_string (const char *str) {
 	}
 }
 
+static bool
+copy_user_string_to_page (const char *src, char *dst) {
+	for (size_t i = 0; i < PGSIZE; i++) {
+		if (!is_valid_ptr (src + i))
+			return false;
+		dst[i] = src[i];
+		if (dst[i] == '\0')
+			return true;
+	}
+	return false;
+}
+
 static void
 sys_exit (int status) {
 	struct child_status *cs = thread_current ()->wait_status;
@@ -126,6 +140,15 @@ syscall_handler (struct intr_frame *f) {
 		{
 			char *cmd_line = (char *) f->R.rdi;
 			if (!is_valid_string (cmd_line))
+				sys_exit (-1);
+			char *cmd_line_copy = palloc_get_page (0);
+			if (cmd_line_copy == NULL)
+				sys_exit (-1);
+			if (!copy_user_string_to_page (cmd_line, cmd_line_copy)) {
+				palloc_free_page (cmd_line_copy);
+				sys_exit (-1);
+			}
+			if (process_exec (cmd_line_copy) == -1)
 				sys_exit (-1);
 			break;
 		}
