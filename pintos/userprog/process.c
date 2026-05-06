@@ -462,6 +462,11 @@ process_exit (void) {
 		free(entry);
 	}
 #ifdef USERPROG
+	if ( curr->running_file != NULL ){
+		file_allow_write(curr->running_file);
+		file_close(curr->running_file);
+		curr->running_file = NULL;
+	}
 	struct child_status *cs = curr->wait_status;
 
 	if (cs != NULL) {
@@ -677,11 +682,10 @@ load (const char *file_name, struct intr_frame *if_) {
 #ifdef USERPROG
 	t->running_file = file;
 	file_deny_write(file);
-	return success;
+	file = NULL;	
 #endif
-	
-
 done:
+
 	/* We arrive here whether the load is successful or not. */
 	file_close (file);
 	return success;

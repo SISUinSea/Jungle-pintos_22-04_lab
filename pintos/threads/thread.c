@@ -298,13 +298,7 @@ thread_tid (void) {
 void
 thread_exit (void) {
 	ASSERT (!intr_context ());
-
 #ifdef USERPROG
-	struct thread *t = thread_current ();
-	if ( t->running_file != NULL ){
-		file_allow_write(t->running_file);
-		file_close(t->running_file);
-	}
 	process_exit ();
 #endif
 
@@ -312,7 +306,9 @@ thread_exit (void) {
 	   We will be destroyed during the call to schedule_tail(). */
 	intr_disable ();
 	do_schedule (THREAD_DYING);
+
 	NOT_REACHED ();
+
 }
 
 /* Yields the CPU.  The current thread is not put to sleep and
