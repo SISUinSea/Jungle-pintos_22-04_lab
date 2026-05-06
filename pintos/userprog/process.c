@@ -402,6 +402,10 @@ process_wait (tid_t child_tid UNUSED) {
 		return -1;
 	}
 
+	if (cs->waited) {
+		return -1;
+	}
+
 	cs->waited = true;
 	sema_down (&cs->wait_sema);
 
