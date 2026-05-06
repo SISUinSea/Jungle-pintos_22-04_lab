@@ -250,7 +250,13 @@ syscall_handler (struct intr_frame *f) {
 				f->R.rax = size;
 				break;
 			}
-			f->R.rax = -1;
+			struct fd_entry *entry = find_fd_entry (fd);
+			if (entry == NULL) {
+				f->R.rax = -1;
+				break;
+			}
+			
+			f->R.rax = file_write(fd, buf, size);
 			break;
 		}
 		case SYS_CLOSE:
