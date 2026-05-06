@@ -256,7 +256,7 @@ syscall_handler (struct intr_frame *f) {
 		case SYS_SEEK:
 		{
 			int fd = (int) f->R.rdi;
-			int pos = (int) f->R.rsi;
+			unsigned pos = (unsigned) f->R.rsi;
 			struct fd_entry *fd_entry = find_fd_entry (fd);
 			if (fd_entry == NULL) {
 				break;
