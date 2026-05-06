@@ -300,6 +300,11 @@ thread_exit (void) {
 	ASSERT (!intr_context ());
 
 #ifdef USERPROG
+	struct thread *t = thread_current ();
+	if ( t->running_file != NULL ){
+		file_allow_write(t->running_file);
+		file_close(t->running_file);
+	}
 	process_exit ();
 #endif
 
@@ -444,6 +449,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->waiting_lock = NULL;
 	list_init (&t->donators);
 #ifdef USERPROG
+	t->running_file = NULL;
 	list_init (&t->fd_table);
 	list_init (&t->children);
 #endif

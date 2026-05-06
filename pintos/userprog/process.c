@@ -343,8 +343,10 @@ process_exec (void *f_name) {
 
 	/* And then load the binary */
 	success = load (arg, &_if);
+	
 	if (success)
 	{
+		
 		while(arg != NULL && arg_count < 32)
 		{
 			argv_tokens[arg_count++] = arg;
@@ -459,7 +461,7 @@ process_exit (void) {
 		file_close (entry->file);
 		free(entry);
 	}
-
+#ifdef USERPROG
 	struct child_status *cs = curr->wait_status;
 
 	if (cs != NULL) {
@@ -469,6 +471,8 @@ process_exit (void) {
 		cs->exited = true;
 		sema_up (&cs->wait_sema);
 	}
+
+#endif
 	process_cleanup ();
 }
 
@@ -669,8 +673,13 @@ load (const char *file_name, struct intr_frame *if_) {
 
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
-
 	success = true;
+#ifdef USERPROG
+	t->running_file = file;
+	file_deny_write(file);
+	return success;
+#endif
+	
 
 done:
 	/* We arrive here whether the load is successful or not. */

@@ -8,7 +8,6 @@
 #ifdef VM
 #include "vm/vm.h"
 #endif
-#define USERPROG
 
 
 /* States in a thread's life cycle. */
@@ -126,6 +125,7 @@ struct thread {
 	/* Variables for wait-exit(parent - child) synchronization. */
 	struct list children;
 	struct child_status *wait_status;
+	struct file *running_file;
 
 #endif
 #ifdef VM
