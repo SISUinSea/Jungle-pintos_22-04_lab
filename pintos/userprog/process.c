@@ -436,6 +436,16 @@ process_exit (void) {
 		file_close(entry->file);
 		free(entry);
 	}
+	while (!list_empty (&curr->children)) {
+		e = list_begin (&curr->children);
+		struct child_status *child_cs = list_entry (e, struct child_status, elem);
+		list_remove (e);
+
+		if (child_cs->exited)
+			free (child_cs);
+		else
+			child_cs->parent_alive = false;
+	}
 	struct child_status *cs = curr->wait_status;
 
 	if (cs != NULL) {
