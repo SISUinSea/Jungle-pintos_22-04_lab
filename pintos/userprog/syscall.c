@@ -253,6 +253,31 @@ syscall_handler (struct intr_frame *f) {
 			f->R.rax = -1;
 			break;
 		}
+		case SYS_SEEK:
+		{
+			int fd = (int) f->R.rdi;
+			unsigned pos = (unsigned) f->R.rsi;
+			if (pos < 0) {
+				pos = 0;
+			}
+			struct fd_entry *fd_entry = find_fd_entry (fd);
+			if (fd_entry == NULL) {
+				break;
+			}
+			file_seek (fd_entry->file, pos);
+			break;
+		}
+		case SYS_TELL:
+		{
+			int fd = (int) f->R.rdi;
+			struct fd_entry *fd_entry = find_fd_entry (fd);
+			if (fd_entry == NULL) {
+				f->R.rax = -1;
+				break;
+			}
+			f->R.rax = file_tell (fd_entry->file);
+			break;
+		}
 		case SYS_CLOSE:
 		{
 			int fd = f->R.rdi;
