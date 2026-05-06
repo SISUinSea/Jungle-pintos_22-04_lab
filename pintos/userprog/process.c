@@ -445,9 +445,6 @@ process_exit (void) {
 		
 		cs->exited = true;
 		sema_up (&cs->wait_sema);
-
-		if (!cs->parent_alive)
-			free (cs);
 	}
 	process_cleanup ();
 }
