@@ -308,6 +308,7 @@ __do_fork (void *aux) {
 	if (succ)
 		do_iret (&if_);
 error:
+	cs->tid = TID_ERROR;
 	sema_up (&cs->wait_sema);
 	thread_exit ();
 }
