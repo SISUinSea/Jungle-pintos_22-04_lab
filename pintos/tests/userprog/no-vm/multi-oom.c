@@ -108,9 +108,15 @@ make_children (void) {
     if (i > EXPECTED_DEPTH_TO_PASS/2) {
       snprintf (child_name, sizeof child_name, "%s_%d_%s", "child", i, "X");
       pid = fork(child_name);
+      if (i >= 45) {
+        printf("1. [parent side]:fork result is...%d\n", pid);
+      }
       if (pid > 0 && wait (pid) != -1) {
         fail ("crashed child should return -1.");
       } else if (pid == 0) {
+        if (i == 46) {
+          printf("do consume_some_resources_and_die... will it be exited???");
+        }
         consume_some_resources_and_die();
         fail ("Unreachable");
       }
@@ -118,6 +124,9 @@ make_children (void) {
 
     snprintf (child_name, sizeof child_name, "%s_%d_%s", "child", i, "O");
     pid = fork(child_name);
+    if (i >= 45 && pid != 0) {
+      printf("2. [parent side]:fork result is...%d\n", pid);
+    }
     if (pid < 0) {
       exit (i);
     } else if (pid == 0) {

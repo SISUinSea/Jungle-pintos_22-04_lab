@@ -166,6 +166,7 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	list_push_back (&thread_current ()->children, &cs->elem);
 	
 	tid_t tid = thread_create (name, PRI_DEFAULT, __do_fork, fi);
+	printf ("[In parent process] returned tid is... %d==========\n", tid);
 	if (tid == TID_ERROR) {
 		list_remove (&cs->elem);
 		free (cs);
@@ -241,10 +242,11 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
  *       this function. */
 static void
 __do_fork (void *aux) {
+	printf ("[In child process, tid:%d] __do_fork is processed... ==========\n", thread_current ()->tid);
+
 	struct intr_frame if_;
 	struct thread *parent = (struct thread*) (((struct fork_info *) aux)->t);
 	struct thread *current = thread_current ();
-	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
 	struct intr_frame *parent_if = ((struct fork_info *) aux)->if_;
 	struct child_status *cs = ((struct fork_info *) aux)->cs;
 
@@ -287,7 +289,7 @@ __do_fork (void *aux) {
 	{
 		struct fd_entry *fde = list_entry (e, struct fd_entry, file_elem);
 		struct fd_entry *new_fde = malloc (sizeof (struct fd_entry));
-		if (new_fde == NULL) {
+		if (new_fde == NULL) {  // TODO. 여기서 기존에 만들어놨던 fde를 정리 안 하면 memory leak 아님?
 			cs->tid = TID_ERROR;
 			sema_up (&cs->wait_sema);
 			thread_exit ();
@@ -306,6 +308,7 @@ __do_fork (void *aux) {
 	if (succ)
 		do_iret (&if_);
 error:
+	sema_up (&cs->wait_sema);
 	thread_exit ();
 }
 
@@ -404,12 +407,7 @@ process_exec (void *f_name) {
  * This function will be implemented in problem 2-2.  For now, it
  * does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) {
-	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
-	 * XXX:       to add infinite loop here before
-	 * XXX:       implementing the process_wait. */
-	/*  */
-
+process_wait (tid_t child_tid) {
 	struct thread* cur = thread_current ();
 	struct child_status *cs = NULL;
 	for (struct list_elem *e = list_begin (&cur->children); 
