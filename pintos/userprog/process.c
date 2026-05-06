@@ -255,6 +255,8 @@ __do_fork (void *aux) {
 
 	/* 1. Read the cpu context to local stack. */
 	memcpy (&if_, parent_if, sizeof (struct intr_frame));
+	free (parent_if);
+	free (aux);
 
 	/* 2. Duplicate PT */
 	current->pml4 = pml4_create();
@@ -290,6 +292,14 @@ __do_fork (void *aux) {
 		struct fd_entry *fde = list_entry (e, struct fd_entry, file_elem);
 		struct fd_entry *new_fde = malloc (sizeof (struct fd_entry));
 		if (new_fde == NULL) {  // TODO. 여기서 기존에 만들어놨던 fde를 정리 안 하면 memory leak 아님?
+			struct list *fd_table = &current->fd_table;
+			while (!list_empty(fd_table)) {
+				e = list_begin(fd_table);
+				struct fd_entry *entry = list_entry(e, struct fd_entry, file_elem);
+				list_remove(e);
+				file_close (entry->file);
+				free(entry);
+			}
 			cs->tid = TID_ERROR;
 			sema_up (&cs->wait_sema);
 			thread_exit ();
