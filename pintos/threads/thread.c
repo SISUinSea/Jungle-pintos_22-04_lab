@@ -447,7 +447,6 @@ init_thread (struct thread *t, const char *name, int priority) {
 #ifdef USERPROG
 	t->running_file = NULL;
 	list_init (&t->fd_table);
-	t->fd_table
 	list_init (&t->children);
 #endif
 }

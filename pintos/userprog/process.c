@@ -28,11 +28,32 @@ static void process_cleanup (void);
 static bool load (const char *file_name, struct intr_frame *if_);
 static void initd (void *ii);
 static void __do_fork (void *);
+static bool is_file_fd (const struct fd_entry *entry);
 
 /* General process initializer for initd and other process. */
 static void
 process_init (void) {
 	struct thread *current = thread_current ();
+
+	struct fd_entry *stdin_fd = malloc (sizeof (struct fd_entry));
+	if (stdin_fd != NULL) {
+		stdin_fd->fd = STDIN_FILENO;
+		stdin_fd->sfd = malloc (sizeof (struct shared_fd));
+		stdin_fd->sfd->type = STDIN_FILENO;
+		list_push_back (&current->fd_table, &stdin_fd->file_elem);
+	}
+	struct fd_entry *stdout_fd = malloc (sizeof (struct fd_entry));
+	if (stdout_fd != NULL) {
+		stdout_fd->fd = STDOUT_FILENO;
+		stdout_fd->sfd = malloc (sizeof (struct shared_fd));
+		stdout_fd->sfd->type = STDOUT_FILENO;
+		list_push_back (&current->fd_table, &stdout_fd->file_elem);
+	}
+}
+
+static bool
+is_file_fd (const struct fd_entry *entry) {
+	return entry->sfd->type == FILE_TYPE;
 }
 
 struct initd_info {
@@ -294,8 +315,10 @@ __do_fork (void *aux) {
 		}
 		new_fde->fd = fde->fd;
 		new_fde->sfd = malloc (sizeof (struct shared_fd));
-		new_fde->sfd->file = file_duplicate (fde->sfd->file);
+		if (is_file_fd (fde))
+			new_fde->sfd->file = file_duplicate (fde->sfd->file);
 		new_fde->sfd->shared_count = 1;
+		new_fde->sfd->type = fde->sfd->type;
 		list_push_back (&current->fd_table, &new_fde->file_elem);
 	}
 
@@ -461,7 +484,7 @@ process_exit (void) {
 		struct fd_entry *entry = list_entry(e, struct fd_entry, file_elem);
 		list_remove(e);
 		entry->sfd->shared_count--;
-		if ( entry->sfd->shared_count == 0 )
+		if (is_file_fd (entry) && entry->sfd->shared_count == 0)
 		{
 			file_close (entry->sfd->file);
 			free (entry->sfd);

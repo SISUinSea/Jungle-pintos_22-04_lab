@@ -42,8 +42,6 @@ static void sys_exit (int status);
 #define MSR_LSTAR 0xc0000082        /* Long mode SYSCALL target */
 #define MSR_SYSCALL_MASK 0xc0000084 /* Mask for the eflags */
 
-#define FILE_TYPE 3
-
 void
 syscall_init (void) {
 	write_msr(MSR_STAR, ((uint64_t)SEL_UCSEG - 0x10) << 48  |
@@ -179,7 +177,7 @@ syscall_handler (struct intr_frame *f) {
 			char *file_name = (char *) f->R.rdi;
 			if (!is_valid_string (file_name))
 				sys_exit (-1);
-			
+
 			f->R.rax = filesys_remove(file_name);
 			break;
 		}
@@ -226,10 +224,11 @@ syscall_handler (struct intr_frame *f) {
 		{
 			int fd = f->R.rdi;	
 			struct fd_entry *entry = find_fd_entry(fd);
-			if (entry == NULL) {
+			if (entry == NULL || entry->sfd->type != FILE_TYPE) {
 				f->R.rax = -1;
 				break;
 			}
+
 			f->R.rax = file_length(entry->sfd->file);
 			break;
 		}
@@ -246,20 +245,21 @@ syscall_handler (struct intr_frame *f) {
 				break;
 			}
 
-			if (fd == STDIN_FILENO) {
+
+			struct fd_entry *fd_entry = find_fd_entry (fd);
+			if (fd_entry == NULL) {
+				f->R.rax = -1;
+				break;
+			}
+
+			if (fd_entry->sfd->type == STDIN_FILENO) {
 				for (int i = 0; i < size; i++)
 					buf[i] = input_getc ();
 				f->R.rax = size;
 				break;
 			}
 
-			if (fd == STDOUT_FILENO) {
-				f->R.rax = -1;
-				break;
-			}
-
-			struct fd_entry *fd_entry = find_fd_entry (fd);
-			if (fd_entry == NULL) {
+			if (fd_entry->sfd->type == STDOUT_FILENO) {
 				f->R.rax = -1;
 				break;
 			}
@@ -275,18 +275,22 @@ syscall_handler (struct intr_frame *f) {
 			if (buf == NULL || !is_valid_buffer (buf, size))
 				sys_exit (-1);
 
-			if (fd == STDOUT_FILENO) {
-				putbuf (buf, size);
-				f->R.rax = size;
-				break;
-			}
+
 
 			struct fd_entry *entry = find_fd_entry (fd);
 			if (entry == NULL) {
 				f->R.rax = -1;
 				break;
 			}
-			f->R.rax = file_write(entry->sfd->file, buf, size);
+			if (entry->sfd->type == STDOUT_FILENO) {
+				putbuf (buf, size);
+				f->R.rax = size;
+				break;
+			}
+			if (entry->sfd->type == FILE_TYPE)
+			{
+				f->R.rax = file_write(entry->sfd->file, buf, size);
+			}
 			break;
 		}
 		case SYS_SEEK:
@@ -300,7 +304,10 @@ syscall_handler (struct intr_frame *f) {
 			if (fd_entry == NULL) {
 				break;
 			}
-			file_seek (fd_entry->sfd->file, pos);
+			if (fd_entry->sfd->type == FILE_TYPE)
+			{
+				file_seek (fd_entry->sfd->file, pos);
+			}
 			break;
 		}
 		case SYS_TELL:
@@ -311,7 +318,10 @@ syscall_handler (struct intr_frame *f) {
 				f->R.rax = -1;
 				break;
 			}
-			f->R.rax = file_tell (fd_entry->sfd->file);
+			if (fd_entry->sfd->type == FILE_TYPE)
+			{
+				f->R.rax = file_tell (fd_entry->sfd->file);
+			}
 			break;
 		}
 		case SYS_CLOSE:
@@ -322,15 +332,18 @@ syscall_handler (struct intr_frame *f) {
 				f->R.rax = -1;
 				break;
 			}
-
-			list_remove (&fd_entry->file_elem);
-			fd_entry->sfd->shared_count--;
-			if (fd_entry->sfd->shared_count == 0)
+			if (fd_entry->sfd->type == FILE_TYPE)
 			{
-				file_close (fd_entry->sfd->file);
+				list_remove (&fd_entry->file_elem);
+				fd_entry->sfd->shared_count--;
+				if (fd_entry->sfd->shared_count == 0)
+				{
+					file_close (fd_entry->sfd->file);
+				}
+				free (fd_entry);
 			}
-			free (fd_entry);
 			break;
+
 		}
 		case SYS_DUP2:
 		{

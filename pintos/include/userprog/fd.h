@@ -5,6 +5,8 @@
 
 struct file;
 
+#define FILE_TYPE 3
+
 struct fd_entry {
 	int fd;
 	struct shared_fd *sfd;
