@@ -15,6 +15,7 @@
 #include "threads/vaddr.h"
 #include "intrinsic.h"
 #include "userprog/process.h"
+#include "devices/input.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 
@@ -198,11 +199,36 @@ syscall_handler (struct intr_frame *f) {
 		}
 		case SYS_READ:
 		{
+			int fd = (int) f->R.rdi;
 			char *buf = (char *) f->R.rsi;
 			int size = (int) f->R.rdx;
-			if (buf == NULL || !is_valid_buffer (buf, size))
+			if (!is_valid_buffer (buf, size))
 				sys_exit (-1);
-			f->R.rax = -1;
+
+			if (size == 0) {
+				f->R.rax = 0;
+				break;
+			}
+
+			if (fd == STDIN_FILENO) {
+				for (int i = 0; i < size; i++)
+					buf[i] = input_getc ();
+				f->R.rax = size;
+				break;
+			}
+
+			if (fd == STDOUT_FILENO) {
+				f->R.rax = -1;
+				break;
+			}
+
+			struct fd_entry *fd_entry = find_fd_entry (fd);
+			if (fd_entry == NULL) {
+				f->R.rax = -1;
+				break;
+			}
+
+			f->R.rax = file_read (fd_entry->file, buf, size);
 			break;
 		}
 		case SYS_WRITE:
