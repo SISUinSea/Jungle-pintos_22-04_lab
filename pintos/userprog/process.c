@@ -50,6 +50,7 @@ init_child_status (struct thread* current) {
 	cs->tid = -1;
 	cs->waited = false;
 	cs->exited = false;
+	cs->parent_alive = true; //init_child_status()로 만든 자식 기록지에 “부모는 살아있다”를 기본값으로 넣는 것.
 	cs->exit_code = -1;
 	sema_init (&cs->wait_sema, 0);
 	list_push_back (&thread_current ()->children, &cs->elem);
