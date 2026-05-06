@@ -173,6 +173,9 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	cs->tid = tid;
 	
 	sema_down (&cs->wait_sema);
+	if (cs->tid == TID_ERROR) {
+		return TID_ERROR;
+	}
 	return tid;
 }
 
@@ -282,7 +285,9 @@ __do_fork (void *aux) {
 		struct fd_entry *fde = list_entry (e, struct fd_entry, file_elem);
 		struct fd_entry *new_fde = malloc (sizeof (struct fd_entry));
 		if (new_fde == NULL) {
-			return TID_ERROR;
+			cs->tid = TID_ERROR;
+			sema_up (&cs->wait_sema);
+			thread_exit ();
 		}
 		new_fde->fd = fde->fd;
 		new_fde->file = file_duplicate (fde->file);
