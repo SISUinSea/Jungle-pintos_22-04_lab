@@ -262,6 +262,12 @@ syscall_handler (struct intr_frame *f) {
 		case SYS_TELL:
 		{
 			int fd = (int) f->R.rdi;
+			struct fd_entry *fd_entry = find_fd_entry (fd);
+			if (fd_entry == NULL) {
+				f->R.rax = -1;
+				break;
+			}
+			f->R.rax = file_tell (fd_entry->file);
 			break;
 		}
 		case SYS_CLOSE:
