@@ -28,11 +28,46 @@ static void process_cleanup (void);
 static bool load (const char *file_name, struct intr_frame *if_);
 static void initd (void *ii);
 static void __do_fork (void *);
+static bool is_file_fd (const struct fd_entry *entry);
 
 /* General process initializer for initd and other process. */
 static void
 process_init (void) {
 	struct thread *current = thread_current ();
+
+	struct fd_entry *stdin_fd = malloc (sizeof (struct fd_entry));
+	if (stdin_fd != NULL) {
+		stdin_fd->fd = STDIN_FILENO;
+		stdin_fd->sfd = malloc (sizeof (struct shared_fd));
+		if (stdin_fd->sfd == NULL) {
+			free (stdin_fd);
+		}
+		else {
+			stdin_fd->sfd->type = STDIN_FILENO;
+			stdin_fd->sfd->shared_count = 1;
+			stdin_fd->sfd->file = NULL;
+			list_push_back (&current->fd_table, &stdin_fd->file_elem);
+		}
+	}
+	struct fd_entry *stdout_fd = malloc (sizeof (struct fd_entry));
+	if (stdout_fd != NULL) {
+		stdout_fd->fd = STDOUT_FILENO;
+		stdout_fd->sfd = malloc (sizeof (struct shared_fd));
+		if (stdout_fd->sfd == NULL) {
+			free (stdout_fd);
+		}
+		else {
+			stdout_fd->sfd->type = STDOUT_FILENO;
+			stdout_fd->sfd->shared_count = 1;
+			stdout_fd->sfd->file = NULL;
+			list_push_back (&current->fd_table, &stdout_fd->file_elem);
+		}
+	}
+}
+
+static bool
+is_file_fd (const struct fd_entry *entry) {
+	return entry->sfd->type == FILE_TYPE;
 }
 
 struct initd_info {
@@ -303,7 +338,16 @@ __do_fork (void *aux) {
 			thread_exit ();
 		}
 		new_fde->fd = fde->fd;
-		new_fde->file = file_duplicate (fde->file);
+		new_fde->sfd = malloc (sizeof (struct shared_fd));
+		if (new_fde->sfd == NULL) {
+			free (new_fde);
+			thread_exit ();
+		}
+		new_fde->sfd->file = NULL;
+		if (is_file_fd (fde))
+			new_fde->sfd->file = file_duplicate (fde->sfd->file);
+		new_fde->sfd->shared_count = 1;
+		new_fde->sfd->type = fde->sfd->type;
 		list_push_back (&current->fd_table, &new_fde->file_elem);
 	}
 
@@ -355,8 +399,10 @@ process_exec (void *f_name) {
 
 	/* And then load the binary */
 	success = load (arg, &_if);
+	
 	if (success)
 	{
+		
 		while(arg != NULL && arg_count < 32)
 		{
 			argv_tokens[arg_count++] = arg;
@@ -463,10 +509,21 @@ process_exit (void) {
 		e = list_begin(fd_table);
 		struct fd_entry *entry = list_entry(e, struct fd_entry, file_elem);
 		list_remove(e);
-		file_close (entry->file);
+		entry->sfd->shared_count--;
+		if (entry->sfd->shared_count == 0)
+		{
+			if (is_file_fd (entry))
+				file_close (entry->sfd->file);
+			free (entry->sfd);
+		}
 		free(entry);
 	}
-
+#ifdef USERPROG
+	if ( curr->running_file != NULL ){	
+		file_allow_write(curr->running_file);
+		file_close(curr->running_file);	
+		curr->running_file = NULL;
+	}
 	struct child_status *cs = curr->wait_status;
 
 	if (cs != NULL) {
@@ -476,6 +533,11 @@ process_exit (void) {
 		cs->exited = true;
 		sema_up (&cs->wait_sema);
 	}
+
+
+
+
+#endif
 	process_cleanup ();
 }
 
@@ -676,10 +738,14 @@ load (const char *file_name, struct intr_frame *if_) {
 
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
-
 	success = true;
-
+#ifdef USERPROG
+	t->running_file = file;
+	file_deny_write(file);
+	file = NULL;	
+#endif
 done:
+
 	/* We arrive here whether the load is successful or not. */
 	file_close (file);
 	return success;

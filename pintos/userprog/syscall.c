@@ -177,7 +177,7 @@ syscall_handler (struct intr_frame *f) {
 			char *file_name = (char *) f->R.rdi;
 			if (!is_valid_string (file_name))
 				sys_exit (-1);
-			
+
 			f->R.rax = filesys_remove(file_name);
 			break;
 		}
@@ -212,7 +212,10 @@ syscall_handler (struct intr_frame *f) {
 			}
 
 			entry->fd = max_fd + 1;
-			entry->file = file;
+			entry->sfd = malloc (sizeof (struct shared_fd));
+			entry->sfd->type = FILE_TYPE;
+			entry->sfd->file = file;
+			entry->sfd->shared_count = 1;
 			list_push_back (&cur->fd_table, &entry->file_elem);
 			f->R.rax = entry->fd;
 			break;
@@ -221,11 +224,12 @@ syscall_handler (struct intr_frame *f) {
 		{
 			int fd = f->R.rdi;	
 			struct fd_entry *entry = find_fd_entry(fd);
-			if (entry == NULL) {
+			if (entry == NULL || entry->sfd->type != FILE_TYPE) {
 				f->R.rax = -1;
 				break;
 			}
-			f->R.rax = file_length(entry->file);
+
+			f->R.rax = file_length(entry->sfd->file);
 			break;
 		}
 		case SYS_READ:
@@ -241,17 +245,6 @@ syscall_handler (struct intr_frame *f) {
 				break;
 			}
 
-			if (fd == STDIN_FILENO) {
-				for (int i = 0; i < size; i++)
-					buf[i] = input_getc ();
-				f->R.rax = size;
-				break;
-			}
-
-			if (fd == STDOUT_FILENO) {
-				f->R.rax = -1;
-				break;
-			}
 
 			struct fd_entry *fd_entry = find_fd_entry (fd);
 			if (fd_entry == NULL) {
@@ -259,7 +252,19 @@ syscall_handler (struct intr_frame *f) {
 				break;
 			}
 
-			f->R.rax = file_read (fd_entry->file, buf, size);
+			if (fd_entry->sfd->type == STDIN_FILENO) {
+				for (int i = 0; i < size; i++)
+					buf[i] = input_getc ();
+				f->R.rax = size;
+				break;
+			}
+
+			if (fd_entry->sfd->type == STDOUT_FILENO) {
+				f->R.rax = -1;
+				break;
+			}
+
+			f->R.rax = file_read (fd_entry->sfd->file, buf, size);
 			break;
 		}
 		case SYS_WRITE:
@@ -270,18 +275,22 @@ syscall_handler (struct intr_frame *f) {
 			if (buf == NULL || !is_valid_buffer (buf, size))
 				sys_exit (-1);
 
-			if (fd == STDOUT_FILENO) {
-				putbuf (buf, size);
-				f->R.rax = size;
-				break;
-			}
+
 
 			struct fd_entry *entry = find_fd_entry (fd);
 			if (entry == NULL) {
 				f->R.rax = -1;
 				break;
 			}
-			f->R.rax = file_write(entry->file, buf, size);
+			if (entry->sfd->type == STDOUT_FILENO) {
+				putbuf (buf, size);
+				f->R.rax = size;
+				break;
+			}
+			if (entry->sfd->type == FILE_TYPE)
+			{
+				f->R.rax = file_write(entry->sfd->file, buf, size);
+			}
 			break;
 		}
 		case SYS_SEEK:
@@ -295,7 +304,10 @@ syscall_handler (struct intr_frame *f) {
 			if (fd_entry == NULL) {
 				break;
 			}
-			file_seek (fd_entry->file, pos);
+			if (fd_entry->sfd->type == FILE_TYPE)
+			{
+				file_seek (fd_entry->sfd->file, pos);
+			}
 			break;
 		}
 		case SYS_TELL:
@@ -306,7 +318,10 @@ syscall_handler (struct intr_frame *f) {
 				f->R.rax = -1;
 				break;
 			}
-			f->R.rax = file_tell (fd_entry->file);
+			if (fd_entry->sfd->type == FILE_TYPE)
+			{
+				f->R.rax = file_tell (fd_entry->sfd->file);
+			}
 			break;
 		}
 		case SYS_CLOSE:
@@ -317,11 +332,64 @@ syscall_handler (struct intr_frame *f) {
 				f->R.rax = -1;
 				break;
 			}
-
 			list_remove (&fd_entry->file_elem);
-			file_close (fd_entry->file);
+			fd_entry->sfd->shared_count--;
+			if (fd_entry->sfd->shared_count == 0)
+			{
+				if (fd_entry->sfd->type == FILE_TYPE)
+					file_close (fd_entry->sfd->file);
+				free (fd_entry->sfd);
+			}
 			free (fd_entry);
 			break;
+
+		}
+		case SYS_DUP2:
+		{
+			int fd_1 = f->R.rdi;
+			int fd_2 = f->R.rsi;
+			struct fd_entry *fd_entry_1 = find_fd_entry (fd_1);
+			if (fd_entry_1 == NULL) {
+				f->R.rax = -1;
+				break;
+			}
+			struct fd_entry *fd_entry_2 = find_fd_entry (fd_2);
+			if ( fd_entry_2 != NULL && fd_entry_1->sfd == fd_entry_2->sfd )
+			{
+				f->R.rax = fd_entry_2->fd;
+				break;
+			}
+			if (fd_entry_2 == NULL) 
+			{
+				struct fd_entry *entry = malloc (sizeof *entry);
+				struct thread *cur = thread_current();
+				if (entry == NULL) {
+					f->R.rax = -1;
+					break;
+				}
+				entry->fd = fd_2;
+				entry->sfd = fd_entry_1->sfd;
+				entry->sfd->shared_count++;
+				list_push_back (&cur->fd_table, &entry->file_elem);
+				f->R.rax = entry->fd;	
+
+			}
+			else
+			{
+				fd_entry_2->sfd->shared_count--;
+				if (fd_entry_2->sfd->shared_count == 0)
+				{
+					if (fd_entry_2->sfd->type == FILE_TYPE)
+						file_close (fd_entry_2->sfd->file);
+					free (fd_entry_2->sfd);
+				}
+				fd_entry_2->sfd = fd_entry_1->sfd;
+				fd_entry_2->sfd->shared_count++;
+				f->R.rax = fd_entry_2->fd;
+			}
+			
+			break;
+
 		}
 		default:
 			sys_exit (-1);
