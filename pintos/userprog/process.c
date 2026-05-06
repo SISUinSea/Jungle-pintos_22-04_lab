@@ -159,6 +159,7 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	cs->tid = -1;
 	cs->waited = true;
 	cs->exited = false;
+	cs->exit_code = -1; // fork로 자식 기록지 cs 만들었을 때, 기본 종료값 -1설정. 자식이 비정상 종료 되었을때 대비한 기본값.
 	sema_init (&cs->wait_sema, 0);
 	list_push_back (&thread_current ()->children, &cs->elem);
 	
