@@ -271,6 +271,24 @@ __do_fork (void *aux) {
 	 * TODO:       from the fork() until this function successfully duplicates
 	 * TODO:       the resources of parent.*/
 
+	ASSERT (list_empty (&current->fd_table));
+	struct list_elem *e;
+	for (	
+			e = list_begin (&parent->fd_table); 
+			e != list_end (&parent->fd_table); 
+			e = list_next (e)
+		) 
+	{
+		struct fd_entry *fde = list_entry (e, struct fd_entry, file_elem);
+		struct fd_entry *new_fde = malloc (sizeof (struct fd_entry));
+		if (new_fde == NULL) {
+			return TID_ERROR;
+		}
+		new_fde->fd = fde->fd;
+		new_fde->file = file_duplicate (fde->file);
+		list_push_back (&current->fd_table, &new_fde->file_elem);
+	}
+
 	process_init ();
 
 	/* Finally, switch to the newly created process. */
@@ -426,7 +444,7 @@ process_exit (void) {
 		e = list_begin(fd_table);
 		struct fd_entry *entry = list_entry(e, struct fd_entry, file_elem);
 		list_remove(e);
-		file_close(entry->file);
+		file_close (entry->file);
 		free(entry);
 	}
 	struct child_status *cs = curr->wait_status;
