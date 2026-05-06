@@ -200,7 +200,7 @@ syscall_handler (struct intr_frame *f) {
 				f->R.rax = -1;
 				break;
 			}
-			f->R.rax = file_length(entry->file);
+			f->R.rax = file_length(&entry->file);
 			break;
 		}
 		case SYS_READ:
