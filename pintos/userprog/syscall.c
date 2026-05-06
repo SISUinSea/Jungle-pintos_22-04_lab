@@ -323,13 +323,6 @@ syscall_handler (struct intr_frame *f) {
 			free (fd_entry);
 			break;
 		}
-		case SYS_DUP2:
-		{
-			int fd_1 = f->R.rdi;
-			int fd_2 = f->R.rsi;
-			
-
-		}
 		default:
 			sys_exit (-1);
 			break;
