@@ -154,6 +154,8 @@ syscall_handler (struct intr_frame *f) {
 			char *file_name = (char *) f->R.rdi;
 			if (!is_valid_string (file_name))
 				sys_exit (-1);
+			
+			f->R.rax = filesys_remove(file_name);
 			break;
 		}
 		case SYS_OPEN:
@@ -250,7 +252,13 @@ syscall_handler (struct intr_frame *f) {
 				f->R.rax = size;
 				break;
 			}
-			f->R.rax = -1;
+
+			struct fd_entry *entry = find_fd_entry (fd);
+			if (entry == NULL) {
+				f->R.rax = -1;
+				break;
+			}
+			f->R.rax = file_write(entry->file, buf, size);
 			break;
 		}
 		case SYS_SEEK:
