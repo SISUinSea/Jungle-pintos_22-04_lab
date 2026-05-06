@@ -332,16 +332,15 @@ syscall_handler (struct intr_frame *f) {
 				f->R.rax = -1;
 				break;
 			}
-			if (fd_entry->sfd->type == FILE_TYPE)
+			list_remove (&fd_entry->file_elem);
+			fd_entry->sfd->shared_count--;
+			if (fd_entry->sfd->shared_count == 0)
 			{
-				list_remove (&fd_entry->file_elem);
-				fd_entry->sfd->shared_count--;
-				if (fd_entry->sfd->shared_count == 0)
-				{
+				if (fd_entry->sfd->type == FILE_TYPE)
 					file_close (fd_entry->sfd->file);
-				}
-				free (fd_entry);
+				free (fd_entry->sfd);
 			}
+			free (fd_entry);
 			break;
 
 		}
@@ -368,7 +367,6 @@ syscall_handler (struct intr_frame *f) {
 					f->R.rax = -1;
 					break;
 				}
-				entry->sfd = malloc ( sizeof (struct shared_fd));
 				entry->fd = fd_2;
 				entry->sfd = fd_entry_1->sfd;
 				entry->sfd->shared_count++;
@@ -381,7 +379,9 @@ syscall_handler (struct intr_frame *f) {
 				fd_entry_2->sfd->shared_count--;
 				if (fd_entry_2->sfd->shared_count == 0)
 				{
-					file_close (fd_entry_2->sfd->file);
+					if (fd_entry_2->sfd->type == FILE_TYPE)
+						file_close (fd_entry_2->sfd->file);
+					free (fd_entry_2->sfd);
 				}
 				fd_entry_2->sfd = fd_entry_1->sfd;
 				fd_entry_2->sfd->shared_count++;

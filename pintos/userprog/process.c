@@ -39,15 +39,29 @@ process_init (void) {
 	if (stdin_fd != NULL) {
 		stdin_fd->fd = STDIN_FILENO;
 		stdin_fd->sfd = malloc (sizeof (struct shared_fd));
-		stdin_fd->sfd->type = STDIN_FILENO;
-		list_push_back (&current->fd_table, &stdin_fd->file_elem);
+		if (stdin_fd->sfd == NULL) {
+			free (stdin_fd);
+		}
+		else {
+			stdin_fd->sfd->type = STDIN_FILENO;
+			stdin_fd->sfd->shared_count = 1;
+			stdin_fd->sfd->file = NULL;
+			list_push_back (&current->fd_table, &stdin_fd->file_elem);
+		}
 	}
 	struct fd_entry *stdout_fd = malloc (sizeof (struct fd_entry));
 	if (stdout_fd != NULL) {
 		stdout_fd->fd = STDOUT_FILENO;
 		stdout_fd->sfd = malloc (sizeof (struct shared_fd));
-		stdout_fd->sfd->type = STDOUT_FILENO;
-		list_push_back (&current->fd_table, &stdout_fd->file_elem);
+		if (stdout_fd->sfd == NULL) {
+			free (stdout_fd);
+		}
+		else {
+			stdout_fd->sfd->type = STDOUT_FILENO;
+			stdout_fd->sfd->shared_count = 1;
+			stdout_fd->sfd->file = NULL;
+			list_push_back (&current->fd_table, &stdout_fd->file_elem);
+		}
 	}
 }
 
@@ -315,6 +329,11 @@ __do_fork (void *aux) {
 		}
 		new_fde->fd = fde->fd;
 		new_fde->sfd = malloc (sizeof (struct shared_fd));
+		if (new_fde->sfd == NULL) {
+			free (new_fde);
+			thread_exit ();
+		}
+		new_fde->sfd->file = NULL;
 		if (is_file_fd (fde))
 			new_fde->sfd->file = file_duplicate (fde->sfd->file);
 		new_fde->sfd->shared_count = 1;
@@ -484,9 +503,10 @@ process_exit (void) {
 		struct fd_entry *entry = list_entry(e, struct fd_entry, file_elem);
 		list_remove(e);
 		entry->sfd->shared_count--;
-		if (is_file_fd (entry) && entry->sfd->shared_count == 0)
+		if (entry->sfd->shared_count == 0)
 		{
-			file_close (entry->sfd->file);
+			if (is_file_fd (entry))
+				file_close (entry->sfd->file);
 			free (entry->sfd);
 		}
 		free(entry);
