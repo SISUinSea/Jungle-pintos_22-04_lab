@@ -298,7 +298,6 @@ thread_tid (void) {
 void
 thread_exit (void) {
 	ASSERT (!intr_context ());
-
 #ifdef USERPROG
 	process_exit ();
 #endif
@@ -307,7 +306,9 @@ thread_exit (void) {
 	   We will be destroyed during the call to schedule_tail(). */
 	intr_disable ();
 	do_schedule (THREAD_DYING);
+
 	NOT_REACHED ();
+
 }
 
 /* Yields the CPU.  The current thread is not put to sleep and
@@ -444,6 +445,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->waiting_lock = NULL;
 	list_init (&t->donators);
 #ifdef USERPROG
+	t->running_file = NULL;
 	list_init (&t->fd_table);
 	list_init (&t->children);
 #endif
