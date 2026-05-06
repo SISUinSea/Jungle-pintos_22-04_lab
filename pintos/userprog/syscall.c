@@ -257,6 +257,11 @@ syscall_handler (struct intr_frame *f) {
 		{
 			int fd = (int) f->R.rdi;
 			int pos = (int) f->R.rsi;
+			struct fd_entry *fd_entry = find_fd_entry (fd);
+			if (fd_entry == NULL) {
+				break;
+			}
+			file_seek (fd_entry->file, pos);
 			break;
 		}
 		case SYS_TELL:
