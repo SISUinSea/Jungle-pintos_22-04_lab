@@ -253,6 +253,17 @@ syscall_handler (struct intr_frame *f) {
 			f->R.rax = -1;
 			break;
 		}
+		case SYS_SEEK:
+		{
+			int fd = (int) f->R.rdi;
+			int pos = (int) f->R.rsi;
+			break;
+		}
+		case SYS_TELL:
+		{
+			int fd = (int) f->R.rdi;
+			break;
+		}
 		case SYS_CLOSE:
 		{
 			int fd = f->R.rdi;
