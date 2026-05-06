@@ -154,6 +154,8 @@ syscall_handler (struct intr_frame *f) {
 			char *file_name = (char *) f->R.rdi;
 			if (!is_valid_string (file_name))
 				sys_exit (-1);
+			
+			f->R.rax = filesys_remove(file_name);
 			break;
 		}
 		case SYS_OPEN:
