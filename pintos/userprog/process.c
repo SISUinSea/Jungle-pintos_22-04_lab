@@ -50,6 +50,7 @@ init_child_status (struct thread* current) {
 	cs->tid = -1;
 	cs->waited = false;
 	cs->exited = false;
+	cs->parent_alive = true; //init_child_status()로 만든 자식 기록지에 “부모는 살아있다”를 기본값으로 넣는 것.
 	cs->exit_code = -1;
 	sema_init (&cs->wait_sema, 0);
 	list_push_back (&thread_current ()->children, &cs->elem);
@@ -157,8 +158,10 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	}
 	fi->cs = cs;
 	cs->tid = -1;
-	cs->waited = true;
+	cs->waited = false;
 	cs->exited = false;
+	cs->parent_alive = true; //init_child_status()로 만든 자식 기록지에 “부모는 살아있다”를 기본값으로 넣는 것.
+	cs->exit_code = -1; // fork로 자식 기록지 cs 만들었을 때, 기본 종료값 -1설정. 자식이 비정상 종료 되었을때 대비한 기본값.
 	sema_init (&cs->wait_sema, 0);
 	list_push_back (&thread_current ()->children, &cs->elem);
 	
@@ -423,6 +426,10 @@ process_wait (tid_t child_tid UNUSED) {
 		return -1;
 	}
 
+	if (cs->waited) {
+		return -1;
+	}
+
 	cs->waited = true;
 	sema_down (&cs->wait_sema);
 
@@ -452,11 +459,13 @@ process_exit (void) {
 		file_close (entry->file);
 		free(entry);
 	}
+
 	struct child_status *cs = curr->wait_status;
 
 	if (cs != NULL) {
 		if (curr->pml4 != NULL)
 			printf("%s: exit(%d)\n", curr->name, cs->exit_code);
+		
 		cs->exited = true;
 		sema_up (&cs->wait_sema);
 	}

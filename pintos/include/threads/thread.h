@@ -92,6 +92,7 @@ struct child_status {
 	tid_t tid;
 	bool exited;
 	bool waited;
+	bool parent_alive; // 부모가 살아있는지 여부. 부모가 죽으면 자식은 더이상 기다릴 필요가 없으므로 이 변수를 추가한다.
 	int exit_code;
 	struct semaphore wait_sema;
 	struct list_elem elem;
