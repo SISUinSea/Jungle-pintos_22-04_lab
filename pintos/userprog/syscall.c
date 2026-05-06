@@ -257,6 +257,9 @@ syscall_handler (struct intr_frame *f) {
 		{
 			int fd = (int) f->R.rdi;
 			unsigned pos = (unsigned) f->R.rsi;
+			if (pos < 0) {
+				pos = 0;
+			}
 			struct fd_entry *fd_entry = find_fd_entry (fd);
 			if (fd_entry == NULL) {
 				break;
