@@ -135,5 +135,67 @@
       "last_used": 1777466534.488,
       "last_action": "run"
     }
+  },
+  "userprog": {
+    "tests/userprog/write-zero": {
+      "count": 14,
+      "last_used": 1778062262.086,
+      "last_action": "run"
+    },
+    "tests/userprog/rox-simple": {
+      "count": 22,
+      "last_used": 1778069586.181,
+      "last_action": "run"
+    },
+    "tests/userprog/rox-child": {
+      "count": 22,
+      "last_used": 1778069586.181,
+      "last_action": "run"
+    },
+    "tests/userprog/rox-multichild": {
+      "count": 22,
+      "last_used": 1778069586.181,
+      "last_action": "run"
+    },
+    "tests/userprog/bad-read": {
+      "count": 6,
+      "last_used": 1778062508.277,
+      "last_action": "run"
+    },
+    "tests/userprog/bad-write": {
+      "count": 4,
+      "last_used": 1778062508.277,
+      "last_action": "run"
+    },
+    "tests/userprog/bad-read2": {
+      "count": 4,
+      "last_used": 1778062508.277,
+      "last_action": "run"
+    },
+    "tests/userprog/bad-write2": {
+      "count": 4,
+      "last_used": 1778062508.277,
+      "last_action": "run"
+    },
+    "tests/userprog/bad-jump": {
+      "count": 4,
+      "last_used": 1778062508.277,
+      "last_action": "run"
+    },
+    "tests/userprog/bad-jump2": {
+      "count": 4,
+      "last_used": 1778062508.277,
+      "last_action": "run"
+    },
+    "tests/userprog/dup2/dup2-complex": {
+      "count": 16,
+      "last_used": 1778071382.57,
+      "last_action": "run"
+    },
+    "tests/userprog/dup2/dup2-simple": {
+      "count": 16,
+      "last_used": 1778071382.57,
+      "last_action": "run"
+    }
   }
 }

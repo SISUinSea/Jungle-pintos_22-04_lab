@@ -293,7 +293,9 @@ __do_fork (void *aux) {
 			thread_exit ();
 		}
 		new_fde->fd = fde->fd;
-		new_fde->file = file_duplicate (fde->file);
+		new_fde->sfd = malloc (sizeof (struct shared_fd));
+		new_fde->sfd->file = file_duplicate (fde->sfd->file);
+		new_fde->sfd->shared_count = 1;
 		list_push_back (&current->fd_table, &new_fde->file_elem);
 	}
 
@@ -458,13 +460,18 @@ process_exit (void) {
 		e = list_begin(fd_table);
 		struct fd_entry *entry = list_entry(e, struct fd_entry, file_elem);
 		list_remove(e);
-		file_close (entry->file);
+		entry->sfd->shared_count--;
+		if ( entry->sfd->shared_count == 0 )
+		{
+			file_close (entry->sfd->file);
+			free (entry->sfd);
+		}
 		free(entry);
 	}
 #ifdef USERPROG
-	if ( curr->running_file != NULL ){
+	if ( curr->running_file != NULL ){	
 		file_allow_write(curr->running_file);
-		file_close(curr->running_file);
+		file_close(curr->running_file);	
 		curr->running_file = NULL;
 	}
 	struct child_status *cs = curr->wait_status;
@@ -476,6 +483,9 @@ process_exit (void) {
 		cs->exited = true;
 		sema_up (&cs->wait_sema);
 	}
+
+
+
 
 #endif
 	process_cleanup ();
