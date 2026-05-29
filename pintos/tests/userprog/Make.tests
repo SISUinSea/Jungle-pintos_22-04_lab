@@ -143,3 +143,8 @@ tests/userprog/wait-killed_PUTFILES += tests/userprog/child-bad
 tests/userprog/rox-child_PUTFILES += tests/userprog/child-rox
 tests/userprog/rox-multichild_PUTFILES += tests/userprog/child-rox
 tests/userprog/exec-read_PUTFILES += tests/userprog/child-read
+
+# Local smoke test for syscall/stdout experiments.
+tests/userprog_PROGS += tests/userprog/printtest
+tests/userprog/printtest_SRC = tests/userprog/printtest.c tests/lib.c
+tests/userprog/printtest.output: TEST = tests/userprog/printtest

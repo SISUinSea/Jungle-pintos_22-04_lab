@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pintos Project 3 TopDown Study</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --paper: #ffffff;
+      --ink: #202938;
+      --muted: #5b677a;
+      --line: #d8dee9;
+      --head: #172033;
+      --blue: #1d4ed8;
+      --green: #047857;
+      --orange: #b45309;
+      --red: #b91c1c;
+      --code: #eef3f8;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.68;
+    }
+
+    header {
+      background: var(--head);
+      color: #f8fafc;
+      padding: 44px 22px 34px;
+    }
+
+    header .wrap,
+    main,
+    footer {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 5vw, 3.1rem);
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 880px;
+      margin: 0;
+      color: #dbeafe;
+      font-size: 1.06rem;
+    }
+
+    main {
+      padding: 28px 20px 54px;
+    }
+
+    section {
+      margin: 18px 0;
+      padding: 24px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      color: #111827;
+      font-size: 1.45rem;
+      line-height: 1.28;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 22px 0 8px;
+      color: #1f2937;
+      font-size: 1.08rem;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 9px 0;
+    }
+
+    ul,
+    ol {
+      padding-left: 22px;
+      margin: 10px 0;
+    }
+
+    li + li {
+      margin-top: 7px;
+    }
+
+    code {
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: var(--code);
+      color: #1e3a8a;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.94em;
+    }
+
+    pre {
+      overflow-x: auto;
+      margin: 14px 0;
+      padding: 14px 16px;
+      border-radius: 8px;
+      background: #101827;
+      color: #e5edf7;
+      line-height: 1.55;
+    }
+
+    pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 0.95rem;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #edf2f7;
+      color: #243044;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      min-height: 100%;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+    }
+
+    .card h3 {
+      margin-top: 0;
+    }
+
+    .callout {
+      margin: 14px 0;
+      padding: 14px 16px;
+      border-radius: 8px;
+    }
+
+    .note {
+      border-left: 4px solid var(--blue);
+      background: #eff6ff;
+    }
+
+    .ok {
+      border-left: 4px solid var(--green);
+      background: #ecfdf5;
+    }
+
+    .warn {
+      border-left: 4px solid var(--orange);
+      background: #fffbeb;
+    }
+
+    .danger {
+      border-left: 4px solid var(--red);
+      background: #fff5f5;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .flow div {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .flow strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #0f172a;
+    }
+
+    .tag {
+      display: inline-block;
+      margin: 2px 4px 2px 0;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: #e0f2fe;
+      color: #075985;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    footer {
+      padding: 0 20px 42px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 880px) {
+      main {
+        padding: 18px 14px 44px;
+      }
+
+      section {
+        padding: 18px;
+      }
+
+      .grid,
+      .flow {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Pintos Project 3: Virtual Memory TopDown 학습 문서</h1>
+      <p class="lead">
+        처음 Project 3을 볼 때 필요한 핵심 키워드만 먼저 예열하고, 그 다음 전체 구조에서 구현 단위로 내려갑니다.
+        목표는 코드를 바로 외우는 것이 아니라 "페이지 폴트가 났을 때 커널이 무엇을 판단하고 무엇을 복구하는가"를 잡는 것입니다.
+      </p>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <h2>0. 아주 짧은 예열: 핵심 용어</h2>
+      <p>
+        Project 3의 중심 문장은 하나입니다. <strong>사용자 프로그램이 어떤 가상 주소에 접근했는데 아직 물리 메모리가 준비되지 않았다면,
+        커널이 그 접근을 해석해서 필요한 페이지를 준비한다.</strong>
+      </p>
+      <div class="grid">
+        <div class="card">
+          <h3>가상 페이지와 프레임</h3>
+          <p><code>page</code>는 사용자 입장에서의 한 페이지입니다. 보통 사용자 가상 주소 <code>va</code>와 연결됩니다.</p>
+          <p><code>frame</code>은 실제 물리 메모리 한 칸입니다. Pintos 코드에서는 커널이 만질 수 있는 주소 <code>kva</code>로 들고 있습니다.</p>
+        </div>
+        <div class="card">
+          <h3>SPT</h3>
+          <p><code>supplemental_page_table</code>은 "이 프로세스의 가상 페이지 설계도"입니다.</p>
+          <p>하드웨어 페이지 테이블인 <code>pml4</code>는 현재 매핑만 알지만, SPT는 아직 메모리에 없는 페이지도 기억해야 합니다.</p>
+        </div>
+        <div class="card">
+          <h3>Page Fault</h3>
+          <p>CPU가 주소 접근에 실패하면 <code>page_fault()</code>가 호출됩니다.</p>
+          <p>Project 3에서는 무조건 죽이는 대신, <code>vm_try_handle_fault()</code>에서 복구 가능한 fault인지 판단합니다.</p>
+        </div>
+        <div class="card">
+          <h3>Lazy Loading</h3>
+          <p>프로그램 실행 시 모든 바이트를 즉시 읽지 않습니다.</p>
+          <p>먼저 SPT에 "나중에 이 주소가 필요하면 파일의 이 위치에서 읽어라"라는 예약만 넣고, 실제 접근이 오면 로드합니다.</p>
+        </div>
+        <div class="card">
+          <h3>Anonymous Page</h3>
+          <p>파일과 직접 연결되지 않은 페이지입니다. 대표적으로 스택, 힙 비슷한 일반 메모리, 0으로 채우는 페이지가 여기에 가깝습니다.</p>
+        </div>
+        <div class="card">
+          <h3>File-backed Page와 mmap</h3>
+          <p>파일 내용을 가상 메모리처럼 보이게 하는 페이지입니다. <code>mmap</code>으로 만든 매핑은 파일의 특정 구간과 연결됩니다.</p>
+        </div>
+        <div class="card">
+          <h3>Swap In/Out</h3>
+          <p>메모리가 부족하면 덜 급한 페이지를 디스크의 swap 영역으로 내보냅니다. 다시 필요하면 swap에서 읽어옵니다.</p>
+        </div>
+        <div class="card">
+          <h3>Dirty와 Accessed</h3>
+          <p><code>dirty</code>는 페이지가 수정되었는지, <code>accessed</code>는 최근 접근되었는지 보는 힌트입니다.</p>
+          <p>파일에 다시 써야 하는지, 어떤 프레임을 쫓아낼지 판단할 때 중요합니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>1. Top Level: Project 3은 무엇을 만드는가</h2>
+      <p>
+        Project 2에서는 프로그램을 실행할 때 필요한 페이지를 거의 즉시 물리 메모리에 올렸습니다.
+        Project 3에서는 이 방식을 더 운영체제답게 바꿉니다. "필요할 때 올리고, 부족하면 내보내고, 다시 필요하면 되살리는" 구조를 만듭니다.
+      </p>
+      <div class="flow">
+        <div><strong>1. 예약</strong><code>load_segment</code>가 실제 로드 대신 SPT에 페이지 정보를 넣습니다.</div>
+        <div><strong>2. 접근</strong>사용자 코드가 아직 매핑되지 않은 주소를 읽거나 씁니다.</div>
+        <div><strong>3. 폴트</strong><code>page_fault</code>가 <code>vm_try_handle_fault</code>로 넘깁니다.</div>
+        <div><strong>4. Claim</strong>프레임을 받고 <code>pml4</code>에 매핑한 뒤 내용을 채웁니다.</div>
+        <div><strong>5. 교체</strong>메모리가 부족하면 victim을 골라 swap out 합니다.</div>
+      </div>
+      <div class="callout note">
+        <strong>읽는 관점:</strong> Project 3 코드는 "할당 함수"보다 "fault 복구 파이프라인"으로 보는 편이 쉽습니다.
+        주소 접근 실패가 들어오고, SPT를 조회하고, 프레임을 마련하고, 타입별 <code>swap_in</code>이 데이터를 채웁니다.
+      </div>
+    </section>
+
+    <section>
+      <h2>2. 큰 구조: 두 개의 테이블을 같이 이해하기</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>구조</th>
+            <th>역할</th>
+            <th>언제 중요해지는가</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>pml4</code></td>
+            <td>하드웨어가 실제 주소 변환에 사용하는 페이지 테이블입니다.</td>
+            <td>이미 물리 프레임에 올라온 페이지를 CPU가 접근할 때 필요합니다.</td>
+          </tr>
+          <tr>
+            <td><code>supplemental_page_table</code></td>
+            <td>커널이 추가로 들고 있는 페이지 메타데이터입니다.</td>
+            <td>아직 로드되지 않았거나, swap에 있거나, 파일에서 읽어야 하는 페이지를 찾을 때 필요합니다.</td>
+          </tr>
+          <tr>
+            <td><code>frame table</code></td>
+            <td>현재 물리 메모리에 올라온 프레임 목록입니다.</td>
+            <td>메모리가 부족해서 어떤 프레임을 내보낼지 고를 때 필요합니다.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        핵심은 <code>pml4</code>만으로는 lazy loading을 구현할 수 없다는 점입니다.
+        아직 물리 메모리에 없는 페이지는 <code>pml4</code>에 매핑이 없으므로, 커널이 SPT에서 "이 주소는 정상적인 예약 페이지인가"를 따로 찾아야 합니다.
+      </p>
+    </section>
+
+    <section>
+      <h2>3. 구현 단위 1: SPT부터 세운다</h2>
+      <p>
+        가장 먼저 각 프로세스가 자기 가상 페이지 목록을 들고 있게 해야 합니다. Pintos 템플릿의
+        <code>struct supplemental_page_table</code>은 비어 있으므로, 보통 해시 테이블을 넣어 <code>va</code>로 <code>struct page</code>를 찾게 만듭니다.
+      </p>
+      <ul>
+        <li><code>supplemental_page_table_init</code>: SPT 자료구조 초기화</li>
+        <li><code>spt_find_page</code>: 주소를 page 단위로 내림 정렬한 뒤 해당 <code>struct page</code> 찾기</li>
+        <li><code>spt_insert_page</code>: 중복 주소가 없을 때 SPT에 page 삽입</li>
+        <li><code>supplemental_page_table_copy</code>: <code>fork</code> 때 부모 SPT를 자식에게 복사</li>
+        <li><code>supplemental_page_table_kill</code>: 프로세스 종료 때 모든 페이지 자원 정리</li>
+      </ul>
+      <div class="callout warn">
+        SPT의 key는 "정확한 fault 주소"가 아니라 page base 주소여야 합니다. 예를 들어 <code>0x8048123</code> 접근은
+        <code>pg_round_down(0x8048123)</code>로 같은 페이지를 찾아야 합니다.
+      </div>
+    </section>
+
+    <section>
+      <h2>4. 구현 단위 2: Page와 Operations를 이해한다</h2>
+      <p>
+        <code>struct page</code>는 Project 3의 중심 객체입니다. 페이지마다 타입이 다르기 때문에,
+        Pintos는 C에서 간단한 다형성처럼 <code>struct page_operations</code> 함수 포인터를 사용합니다.
+      </p>
+      <pre><code>struct page_operations {
+  bool (*swap_in) (struct page *, void *);
+  bool (*swap_out) (struct page *);
+  void (*destroy) (struct page *);
+  enum vm_type type;
+};</code></pre>
+      <p>
+        그래서 공통 코드에서는 <code>swap_in(page, kva)</code>만 호출해도 됩니다.
+        실제로는 페이지 타입에 따라 <code>anon_swap_in</code>, <code>file_backed_swap_in</code>,
+        <code>uninit_initialize</code> 중 하나가 호출됩니다.
+      </p>
+      <p>
+        처음에는 모든 lazy page가 <code>VM_UNINIT</code>으로 태어납니다. 첫 page fault가 발생해서 <code>swap_in</code>이 호출되면,
+        그때 진짜 타입인 <code>VM_ANON</code> 또는 <code>VM_FILE</code>로 초기화됩니다.
+      </p>
+    </section>
+
+    <section>
+      <h2>5. 구현 단위 3: Lazy Loading 흐름</h2>
+      <p>
+        실행 파일 로드는 Project 3에서 가장 먼저 감각을 잡아야 하는 부분입니다.
+        기존에는 <code>load_segment</code>가 파일을 바로 읽어 물리 페이지에 채웠다면, 이제는 "나중에 읽을 정보"를 <code>aux</code>에 담아 예약합니다.
+      </p>
+      <ol>
+        <li><code>load_segment</code>가 페이지별 <code>read_bytes</code>, <code>zero_bytes</code>, <code>ofs</code>, <code>file</code> 정보를 만든다.</li>
+        <li><code>vm_alloc_page_with_initializer</code>로 <code>VM_ANON</code> 또는 필요한 타입의 uninit page를 SPT에 넣는다.</li>
+        <li>사용자 프로그램이 그 주소에 처음 접근한다.</li>
+        <li><code>vm_try_handle_fault</code>가 SPT에서 page를 찾고 <code>vm_do_claim_page</code>를 호출한다.</li>
+        <li><code>uninit_initialize</code>가 <code>lazy_load_segment</code>를 호출해 파일 내용을 실제 프레임에 채운다.</li>
+      </ol>
+      <div class="callout ok">
+        여기서 <code>aux</code>는 미래의 나에게 남기는 쪽지입니다.
+        "이 페이지를 실제로 만들 때 어떤 파일의 어느 offset에서 몇 바이트를 읽고, 나머지는 몇 바이트를 0으로 채울지"를 담습니다.
+      </div>
+    </section>
+
+    <section>
+      <h2>6. 구현 단위 4: Page Fault 처리</h2>
+      <p>
+        <code>userprog/exception.c</code>의 <code>page_fault()</code>는 fault 주소를 <code>rcr2()</code>로 얻고,
+        접근 종류를 <code>not_present</code>, <code>write</code>, <code>user</code>로 해석합니다.
+        Project 3의 진짜 판단은 <code>vm_try_handle_fault()</code>에서 합니다.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>상황</th>
+            <th>처리 방향</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>SPT에 있는 lazy page 접근</td>
+            <td><code>vm_do_claim_page</code>로 프레임을 붙이고 <code>swap_in</code> 합니다.</td>
+          </tr>
+          <tr>
+            <td>스택 근처 접근</td>
+            <td>스택 증가로 인정할 수 있으면 <code>vm_stack_growth</code>로 새 anon page를 만듭니다.</td>
+          </tr>
+          <tr>
+            <td>쓰기 금지 페이지에 write</td>
+            <td>기본 과제에서는 대개 실패 처리입니다. COW extra를 한다면 별도 처리합니다.</td>
+          </tr>
+          <tr>
+            <td>커널 주소, NULL, 완전히 엉뚱한 주소</td>
+            <td>복구할 수 없는 fault이므로 프로세스를 종료해야 합니다.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>7. 구현 단위 5: Frame 관리와 Eviction</h2>
+      <p>
+        <code>vm_get_frame</code>은 user pool에서 물리 페이지를 가져와 <code>struct frame</code>으로 감쌉니다.
+        프레임을 받으면 <code>vm_do_claim_page</code>가 page와 frame을 서로 연결하고, <code>pml4_set_page</code>로 실제 매핑을 만듭니다.
+      </p>
+      <pre><code>page fault
+  -> spt_find_page
+  -> vm_claim_page
+  -> vm_get_frame
+  -> pml4_set_page
+  -> swap_in(page, frame->kva)</code></pre>
+      <p>
+        메모리가 부족하면 <code>vm_get_frame</code>은 새 프레임을 못 받습니다. 이때 <code>vm_evict_frame</code>이 victim을 골라
+        <code>swap_out</code>하고, 비워진 프레임을 재사용해야 합니다.
+      </p>
+      <div class="callout warn">
+        프레임을 내보낼 때는 <code>pml4</code> 매핑도 끊어야 합니다. 그렇지 않으면 CPU는 이미 쫓겨난 물리 프레임을 여전히 유효하다고 믿을 수 있습니다.
+      </div>
+    </section>
+
+    <section>
+      <h2>8. 구현 단위 6: Anonymous Page와 Swap</h2>
+      <p>
+        Anonymous page는 원본 파일이 없습니다. 따라서 메모리에서 쫓겨날 때 보관할 곳이 필요하고, 그곳이 swap disk입니다.
+      </p>
+      <ul>
+        <li><code>vm_anon_init</code>: swap disk를 찾고, swap slot 사용 여부를 관리할 자료구조를 초기화합니다.</li>
+        <li><code>anon_initializer</code>: page의 operations를 <code>anon_ops</code>로 바꾸고 swap 관련 메타데이터를 초기화합니다.</li>
+        <li><code>anon_swap_out</code>: 비어 있는 swap slot을 찾아 한 페이지를 섹터 단위로 기록합니다.</li>
+        <li><code>anon_swap_in</code>: 저장된 swap slot에서 다시 읽고, 그 slot을 해제합니다.</li>
+      </ul>
+      <p>
+        swap slot은 미리 잡아두지 말고 실제로 쫓겨날 때 할당하는 방식이 자연스럽습니다.
+        다시 읽혀 들어온 slot은 즉시 비워야 다음 eviction에서 재사용할 수 있습니다.
+      </p>
+    </section>
+
+    <section>
+      <h2>9. 구현 단위 7: Stack Growth</h2>
+      <p>
+        Project 2의 스택은 처음 만든 한 페이지가 전부였습니다. Project 3에서는 사용자 프로그램이 스택을 더 쓰려고 할 때,
+        그 접근이 스택 증가로 보이면 새 anonymous page를 추가합니다.
+      </p>
+      <ul>
+        <li>fault 주소가 사용자 주소인지 확인합니다.</li>
+        <li>fault 주소가 현재 <code>rsp</code> 근처인지 확인합니다.</li>
+        <li>최대 스택 크기 제한을 넘지 않는지 확인합니다.</li>
+        <li>인정되면 <code>pg_round_down(addr)</code>에 <code>VM_ANON</code> 페이지를 만들고 claim합니다.</li>
+      </ul>
+      <div class="callout note">
+        스택은 아래 방향으로 자랍니다. 주소가 작아지는 방향입니다.
+        그래서 "USER_STACK보다 아래에 있고, 현재 rsp에서 너무 멀지 않은 주소"인지 보는 감각이 중요합니다.
+      </div>
+    </section>
+
+    <section>
+      <h2>10. 구현 단위 8: mmap과 File-backed Page</h2>
+      <p>
+        <code>mmap</code>은 파일을 메모리처럼 보이게 합니다. 사용자가 <code>addr</code>부터 읽으면 사실은 파일의 <code>offset</code>부터 읽는 식입니다.
+        하지만 이것도 lazy하게 만들어야 하므로, 매핑 시점에는 file-backed page들을 SPT에 예약하고 실제 읽기는 fault 때 수행합니다.
+      </p>
+      <ul>
+        <li><code>mmap</code>: syscall 인자 검증 후 <code>do_mmap</code> 호출</li>
+        <li><code>do_mmap</code>: 파일 길이만큼 연속 가상 페이지를 예약</li>
+        <li><code>file_backed_swap_in</code>: 파일에서 읽고 남는 부분은 0으로 채움</li>
+        <li><code>file_backed_swap_out</code>: dirty page라면 파일에 다시 기록</li>
+        <li><code>munmap</code>: 매핑 범위의 페이지를 정리하고 필요한 write-back 수행</li>
+      </ul>
+      <div class="callout danger">
+        <code>mmap</code>은 검증 조건이 많습니다. <code>addr == NULL</code>, 길이 0, 페이지 정렬 안 됨, 기존 SPT 영역과 겹침,
+        fd가 stdin/stdout, offset 정렬 문제 같은 케이스를 초기에 막아야 합니다.
+      </div>
+    </section>
+
+    <section>
+      <h2>11. 추천 구현 순서</h2>
+      <ol>
+        <li>SPT 자료구조와 <code>spt_find_page</code>, <code>spt_insert_page</code>를 먼저 완성합니다.</li>
+        <li><code>vm_alloc_page_with_initializer</code>와 uninit page 생성 흐름을 연결합니다.</li>
+        <li><code>vm_get_frame</code>, <code>vm_claim_page</code>, <code>vm_do_claim_page</code>를 구현해 claim 경로를 만듭니다.</li>
+        <li><code>load_segment</code>, <code>lazy_load_segment</code>, <code>setup_stack</code>을 lazy 방식으로 바꿉니다.</li>
+        <li><code>vm_try_handle_fault</code>에서 SPT 조회와 stack growth 판단을 연결합니다.</li>
+        <li>프로젝트 2 테스트와 lazy 관련 VM 테스트를 먼저 봅니다.</li>
+        <li>frame table과 eviction을 추가합니다.</li>
+        <li>anonymous swap in/out을 구현합니다.</li>
+        <li><code>mmap</code>, file-backed page, <code>munmap</code> write-back을 구현합니다.</li>
+        <li><code>fork</code>, process exit, SPT copy/kill 정리를 단단히 맞춥니다.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>12. 코드에서 볼 주요 위치</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>파일</th>
+            <th>볼 것</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>pintos/include/vm/vm.h</code></td>
+            <td><code>struct page</code>, <code>struct frame</code>, <code>struct supplemental_page_table</code>, <code>page_operations</code></td>
+          </tr>
+          <tr>
+            <td><code>pintos/vm/vm.c</code></td>
+            <td>SPT, frame, claim, eviction, fault handling의 중심</td>
+          </tr>
+          <tr>
+            <td><code>pintos/vm/uninit.c</code></td>
+            <td>lazy page가 첫 fault에서 진짜 page type으로 초기화되는 흐름</td>
+          </tr>
+          <tr>
+            <td><code>pintos/vm/anon.c</code></td>
+            <td>anonymous page 초기화와 swap in/out</td>
+          </tr>
+          <tr>
+            <td><code>pintos/vm/file.c</code></td>
+            <td>mmap, file-backed page, write-back</td>
+          </tr>
+          <tr>
+            <td><code>pintos/userprog/process.c</code></td>
+            <td><code>load_segment</code>, <code>lazy_load_segment</code>, <code>setup_stack</code>, fork와 exit</td>
+          </tr>
+          <tr>
+            <td><code>pintos/userprog/exception.c</code></td>
+            <td><code>page_fault</code>에서 VM fault handler로 넘기는 입구</td>
+          </tr>
+          <tr>
+            <td><code>pintos/userprog/syscall.c</code></td>
+            <td><code>mmap</code>, <code>munmap</code> syscall 연결과 사용자 포인터 검증</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>13. 처음 읽을 때의 mental model</h2>
+      <p>
+        Project 3을 한 번에 "가상 메모리 전체"로 보면 너무 큽니다. 대신 아래 질문 하나로 계속 돌아오면 됩니다.
+      </p>
+      <div class="callout ok">
+        <strong>이 주소는 어디서 온 페이지인가?</strong>
+        <span class="tag">실행 파일</span>
+        <span class="tag">스택</span>
+        <span class="tag">mmap 파일</span>
+        <span class="tag">swap disk</span>
+      </div>
+      <p>
+        답을 찾으면 다음 행동도 정해집니다. 실행 파일이면 lazy loader가 파일에서 읽고,
+        스택이면 anonymous page를 만들고, mmap이면 file-backed page로 읽고,
+        이미 쫓겨났던 페이지면 swap slot에서 되살립니다.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    참고한 로컬 문서:
+    <code>docs/docs_local/pintos-kaist-ko/project3/introduction.html</code>,
+    <code>vm_management.html</code>,
+    <code>anon.html</code>,
+    <code>stack_growth.html</code>,
+    <code>memory_mapped_files.html</code>,
+    <code>swapping.html</code>.
+  </footer>
+</body>
+</html>
